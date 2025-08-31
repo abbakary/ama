@@ -1,112 +1,686 @@
-{% extends 'tracker/base.html' %} {% load form_extras %} {% block content %}
-<h2 class="display-6 m-0 mb-3">New Order for {{ customer.full_name }}</h2>
-<div class="m-card m-elev-2">
-  <div class="m-card-body">
-    <form method="post">
-      {% csrf_token %}
-      <div class="row g-3">
-        <div class="col-md-4">
-          <div class="form-floating">
-            {{ form.type|add_class:'form-select' }}<label>Order Type</label>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="form-floating">
-            {{ form.priority|add_class:'form-select' }}<label>Priority</label>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="form-floating">
-            {{ form.vehicle|add_class:'form-select' }}<label>Vehicle</label>
-          </div>
-        </div>
-        <div id="service-group" class="col-12">
-          <div class="mb-2">
-            <div class="m-chip mb-2">Select required services</div>
-            {{ form.service_selection }}
-          </div>
-          <div class="form-floating mt-3">
-            {{ form.description|add_class:'form-control' }}<label
-              >Problem Description</label
-            >
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="form-floating mt-3">
-            {{ form.estimated_duration|add_class:'form-control' }}<label
-              >Estimated Duration</label
-            >
-          </div>
-        </div>
-        <div id="sales-group" class="row g-3">
-          <div class="col-md-6">
-            <div class="form-floating mt-3">
-              {{ form.item_name|add_class:'form-select' }}<label>Item</label>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="form-floating mt-3">
-              {{ form.brand|add_class:'form-select' }}<label>Brand</label>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="form-floating mt-3">
-              {{ form.quantity|add_class:'form-control' }}<label
-                >Quantity</label
-              >
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="form-floating mt-3">
-              {{ form.tire_type|add_class:'form-select' }}<label
-                >Tire Type</label
-              >
-            </div>
-          </div>
-        </div>
-        <div id="consultation-group" class="row g-3">
-          <div class="col-md-6">
-            <div class="form-floating mt-3">
-              {{ form.inquiry_type|add_class:'form-select' }}<label
-                >Inquiry Type</label
-              >
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="form-floating mt-3">
-              {{ form.contact_preference|add_class:'form-select' }}<label
-                >Contact Preference</label
-              >
-            </div>
-          </div>
-          <div class="col-12">
-            <div class="form-floating mt-3">
-              {{ form.questions|add_class:'form-control' }}<label
-                >Questions</label
-              >
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="form-floating mt-3">
-              {{ form.follow_up_date|add_class:'form-control' }}<label
-                >Follow-up Date</label
-              >
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="mt-3 d-flex gap-2">
-        <button class="btn btn-success">Create</button>
-        <a
-          href="{% url 'tracker:customer_detail' customer.id %}"
-          class="btn btn-outline-secondary"
-          >Cancel</a
-        >
-      </div>
-    </form>
-  </div>
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block page_title %}Create Order{% endblock %}
+{% block breadcrumb %}Create Order{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h4 mb-0">Create New Order</h2>
+    <div class="d-flex gap-2">
+        <a href="{% url 'tracker:customer_register' %}" class="btn btn-outline-success">
+            <i class="fas fa-user-plus"></i> Register New Customer
+        </a>
+        <a href="{% url 'tracker:orders_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Orders
+        </a>
+    </div>
 </div>
+
+<div class="row">
+    <!-- Customer Search Section -->
+    <div class="col-lg-5 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0 text-white">
+                    <i class="fas fa-search"></i> Find Customer
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Search Box -->
+                <div class="search-box mb-4">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="customer-search" class="form-control" 
+                           placeholder="Search by name, phone, email, or customer code...">
+                </div>
+
+                <!-- Search Results -->
+                <div id="search-results">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-search fa-2x mb-2 opacity-25"></i>
+                        <p class="mb-0">Start typing to search for customers</p>
+                    </div>
+                </div>
+
+                <!-- Recent Customers -->
+                <div id="recent-customers">
+                    <h6 class="text-muted mb-3">Recent Customers</h6>
+                    <div class="recent-customers-list">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Selected Customer & Order Form -->
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0 text-white">
+                    <i class="fas fa-clipboard-list"></i> Order Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Selected Customer Display -->
+                <div id="selected-customer" style="display: none;">
+                    <div class="alert alert-info border-0">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="alert-heading mb-2">
+                                    <i class="fas fa-user-check"></i> Selected Customer
+                                </h6>
+                                <div id="customer-details">
+                                    <!-- Customer details will be populated here -->
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSelectedCustomer()">
+                                <i class="fas fa-times"></i> Change
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Customer's Order History -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-2">Order History</h6>
+                        <div id="customer-orders" class="small">
+                            <!-- Order history will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- No Customer Selected Message -->
+                <div id="no-customer-selected">
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-user-slash fa-3x mb-3 opacity-25"></i>
+                        <h6>No Customer Selected</h6>
+                        <p class="mb-0">Please search and select a customer to create an order</p>
+                    </div>
+                </div>
+
+                <!-- Order Form (hidden until customer is selected) -->
+                <div id="order-form-section" style="display: none;">
+                    <form method="post" id="create-order-form">
+                        {% csrf_token %}
+                        <input type="hidden" id="selected-customer-id" name="customer_id" value="">
+
+                        <!-- Order Type and Priority -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Order Type *</label>
+                                <select name="type" id="order-type" class="form-select" required>
+                                    <option value="">Select order type</option>
+                                    <option value="service">Service</option>
+                                    <option value="sales">Sales</option>
+                                    <option value="consultation">Consultation</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Priority</label>
+                                <select name="priority" class="form-select">
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                    <option value="high">High</option>
+                                    <option value="urgent">Urgent</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Vehicle Selection -->
+                        <div class="mb-3">
+                            <label class="form-label">Vehicle</label>
+                            <select name="vehicle" id="vehicle-select" class="form-select">
+                                <option value="">No vehicle / Not applicable</option>
+                            </select>
+                            <small class="form-text text-muted">Select customer's vehicle (if applicable)</small>
+                        </div>
+
+                        <!-- Service Fields -->
+                        <div id="service-fields" style="display: none;">
+                            <div class="card border-info mb-3">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="fas fa-tools"></i> Service Details</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Problem Description *</label>
+                                        <textarea name="description" class="form-control" rows="4" 
+                                                placeholder="Describe the problem or service needed..."></textarea>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Estimated Duration (minutes) *</label>
+                                            <input type="number" name="estimated_duration" class="form-control" min="1" 
+                                                   placeholder="e.g., 60">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sales Fields -->
+                        <div id="sales-fields" style="display: none;">
+                            <div class="card border-success mb-3">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0"><i class="fas fa-shopping-cart"></i> Sales Details</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Item *</label>
+                                            <select name="item_name" class="form-select">
+                                                <option value="">Select item</option>
+                                                <option value="All-Season">All-Season Tires</option>
+                                                <option value="Summer">Summer Tires</option>
+                                                <option value="Winter">Winter Tires</option>
+                                                <option value="Performance">Performance Tires</option>
+                                                <option value="Off-Road">Off-Road Tires</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Brand *</label>
+                                            <select name="brand" class="form-select">
+                                                <option value="">Select brand</option>
+                                                <option value="Michelin">Michelin</option>
+                                                <option value="Bridgestone">Bridgestone</option>
+                                                <option value="Continental">Continental</option>
+                                                <option value="Pirelli">Pirelli</option>
+                                                <option value="Goodyear">Goodyear</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Quantity *</label>
+                                            <input type="number" name="quantity" class="form-control" min="1" value="1">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Additional Notes</label>
+                                        <textarea name="description" class="form-control" rows="2" 
+                                                placeholder="Any specific requirements or notes..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Consultation Fields -->
+                        <div id="consultation-fields" style="display: none;">
+                            <div class="card border-warning mb-3">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0"><i class="fas fa-question-circle"></i> Consultation Details</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Inquiry Type *</label>
+                                            <select name="inquiry_type" class="form-select">
+                                                <option value="">Select type</option>
+                                                <option value="Pricing">Pricing</option>
+                                                <option value="Services">Services</option>
+                                                <option value="Appointment Booking">Appointment Booking</option>
+                                                <option value="General">General</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Contact Preference</label>
+                                            <select name="contact_preference" class="form-select">
+                                                <option value="phone">Phone</option>
+                                                <option value="email">Email</option>
+                                                <option value="whatsapp">WhatsApp</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Questions/Details *</label>
+                                        <textarea name="questions" class="form-control" rows="4" 
+                                                placeholder="What would you like to know about?"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Follow-up Date</label>
+                                        <input type="date" name="follow_up_date" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-plus"></i> Create Order
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Add Customer Modal -->
+<div class="modal fade" id="quickAddCustomerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Quick Add Customer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="quick-customer-form">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Full Name *</label>
+                        <input type="text" name="full_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phone Number *</label>
+                        <input type="text" name="phone" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Customer Type *</label>
+                        <select name="customer_type" class="form-select" required>
+                            <option value="">Select type</option>
+                            <option value="personal">Personal</option>
+                            <option value="company">Company</option>
+                            <option value="government">Government</option>
+                            <option value="ngo">NGO</option>
+                            <option value="bodaboda">Bodaboda</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createQuickCustomer()">
+                    <i class="fas fa-plus"></i> Add Customer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Action Button for Quick Customer Add -->
+<button class="fab" type="button" data-bs-toggle="modal" data-bs-target="#quickAddCustomerModal" 
+        title="Quick Add Customer">
+    <i class="fas fa-user-plus"></i>
+</button>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-  initOrderFormDynamic && initOrderFormDynamic();
+let searchTimeout;
+let selectedCustomer = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize
+    loadRecentCustomers();
+    
+    // Search functionality
+    const searchInput = document.getElementById('customer-search');
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+        
+        if (query.length >= 2) {
+            searchTimeout = setTimeout(() => {
+                searchCustomers(query);
+            }, 300);
+        } else if (query.length === 0) {
+            showRecentCustomers();
+        }
+    });
+
+    // Order type change handler
+    const orderTypeSelect = document.getElementById('order-type');
+    orderTypeSelect.addEventListener('change', function() {
+        const serviceFields = document.getElementById('service-fields');
+        const salesFields = document.getElementById('sales-fields');
+        const consultationFields = document.getElementById('consultation-fields');
+        
+        // Hide all fields
+        serviceFields.style.display = 'none';
+        salesFields.style.display = 'none';
+        consultationFields.style.display = 'none';
+        
+        // Show relevant fields
+        if (this.value === 'service') {
+            serviceFields.style.display = 'block';
+        } else if (this.value === 'sales') {
+            salesFields.style.display = 'block';
+        } else if (this.value === 'consultation') {
+            consultationFields.style.display = 'block';
+        }
+    });
+
+    // Form submission
+    const orderForm = document.getElementById('create-order-form');
+    orderForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (!selectedCustomer) {
+            alert('Please select a customer first.');
+            return;
+        }
+        
+        const orderType = document.getElementById('order-type').value;
+        if (!orderType) {
+            alert('Please select an order type.');
+            return;
+        }
+        
+        // Validate required fields based on order type
+        if (orderType === 'service') {
+            const description = document.querySelector('textarea[name="description"]').value;
+            const duration = document.querySelector('input[name="estimated_duration"]').value;
+            if (!description || !duration) {
+                alert('Please fill in all required service fields.');
+                return;
+            }
+        } else if (orderType === 'sales') {
+            const item = document.querySelector('select[name="item_name"]').value;
+            const brand = document.querySelector('select[name="brand"]').value;
+            const quantity = document.querySelector('input[name="quantity"]').value;
+            if (!item || !brand || !quantity) {
+                alert('Please fill in all required sales fields.');
+                return;
+            }
+        } else if (orderType === 'consultation') {
+            const inquiryType = document.querySelector('select[name="inquiry_type"]').value;
+            const questions = document.querySelector('textarea[name="questions"]').value;
+            if (!inquiryType || !questions) {
+                alert('Please fill in all required consultation fields.');
+                return;
+            }
+        }
+        
+        // Submit form
+        const formData = new FormData(this);
+        formData.set('customer_id', selectedCustomer.id);
+        
+        submitOrder(formData);
+    });
+});
+
+function searchCustomers(query) {
+    const resultsContainer = document.getElementById('search-results');
+    const recentContainer = document.getElementById('recent-customers');
+    
+    resultsContainer.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div> Searching...</div>';
+    recentContainer.style.display = 'none';
+    
+    fetch(`/customers/search/?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            displaySearchResults(data.results);
+        })
+        .catch(error => {
+            console.error('Search error:', error);
+            resultsContainer.innerHTML = '<div class="text-danger text-center py-3">Error searching customers</div>';
+        });
+}
+
+function displaySearchResults(customers) {
+    const resultsContainer = document.getElementById('search-results');
+    
+    if (customers.length === 0) {
+        resultsContainer.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-search fa-2x mb-2 opacity-25"></i>
+                <p class="mb-2">No customers found</p>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#quickAddCustomerModal">
+                    <i class="fas fa-plus"></i> Add New Customer
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    const html = customers.map(customer => `
+        <div class="customer-card border rounded p-3 mb-2 cursor-pointer" onclick="selectCustomer(${customer.id})" 
+             style="cursor: pointer; transition: all 0.3s ease;">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">${customer.name}</h6>
+                    <div class="text-muted small">
+                        <div><i class="fas fa-phone fa-xs"></i> ${customer.phone}</div>
+                        <div><i class="fas fa-id-card fa-xs"></i> ${customer.code}</div>
+                        ${customer.last_visit ? `<div><i class="fas fa-clock fa-xs"></i> Last visit: ${new Date(customer.last_visit).toLocaleDateString()}</div>` : ''}
+                    </div>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-${customer.type === 'personal' ? 'info' : customer.type === 'company' ? 'success' : 'warning'}">${customer.type}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    resultsContainer.innerHTML = html;
+    
+    // Add hover effects
+    document.querySelectorAll('.customer-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f8f9fa';
+            this.style.borderColor = '#007bff';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+            this.style.borderColor = '';
+        });
+    });
+}
+
+function loadRecentCustomers() {
+    fetch('/customers/search/?recent=true')
+        .then(response => response.json())
+        .then(data => {
+            displayRecentCustomers(data.results);
+        })
+        .catch(error => {
+            console.error('Error loading recent customers:', error);
+        });
+}
+
+function displayRecentCustomers(customers) {
+    const container = document.querySelector('.recent-customers-list');
+    
+    if (customers.length === 0) {
+        container.innerHTML = '<p class="text-muted small">No recent customers</p>';
+        return;
+    }
+    
+    const html = customers.slice(0, 5).map(customer => `
+        <div class="customer-card border rounded p-2 mb-2 cursor-pointer" onclick="selectCustomer(${customer.id})" 
+             style="cursor: pointer;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="fw-medium small">${customer.name}</div>
+                    <div class="text-muted" style="font-size: 11px;">${customer.phone}</div>
+                </div>
+                <span class="badge bg-secondary small">${customer.code}</span>
+            </div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = html;
+}
+
+function showRecentCustomers() {
+    document.getElementById('search-results').innerHTML = `
+        <div class="text-center text-muted py-4">
+            <i class="fas fa-search fa-2x mb-2 opacity-25"></i>
+            <p class="mb-0">Start typing to search for customers</p>
+        </div>
+    `;
+    document.getElementById('recent-customers').style.display = 'block';
+}
+
+function selectCustomer(customerId) {
+    fetch(`/customers/${customerId}/`)
+        .then(response => {
+            if (!response.ok) {
+                // If the detail endpoint doesn't exist, use the search API
+                return fetch(`/customers/search/?id=${customerId}`);
+            }
+            return response;
+        })
+        .then(response => response.json())
+        .then(data => {
+            const customer = data.results ? data.results[0] : data;
+            selectedCustomer = customer;
+            
+            // Update UI
+            document.getElementById('selected-customer').style.display = 'block';
+            document.getElementById('no-customer-selected').style.display = 'none';
+            document.getElementById('order-form-section').style.display = 'block';
+            
+            // Populate customer details
+            document.getElementById('customer-details').innerHTML = `
+                <div class="row">
+                    <div class="col-md-8">
+                        <strong>${customer.name}</strong><br>
+                        <span class="text-muted">${customer.phone}</span><br>
+                        <span class="badge bg-info">${customer.type}</span>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <small class="text-muted">Code: ${customer.code}</small>
+                    </div>
+                </div>
+            `;
+            
+            // Set customer ID in form
+            document.getElementById('selected-customer-id').value = customer.id;
+            
+            // Load customer's vehicles
+            loadCustomerVehicles(customer.id);
+            
+            // Load customer's order history
+            loadCustomerOrders(customer.id);
+        })
+        .catch(error => {
+            console.error('Error loading customer:', error);
+            alert('Error loading customer details');
+        });
+}
+
+function loadCustomerVehicles(customerId) {
+    // This would typically fetch from an API endpoint
+    // For now, we'll simulate with static data
+    const vehicleSelect = document.getElementById('vehicle-select');
+    vehicleSelect.innerHTML = '<option value="">No vehicle / Not applicable</option>';
+    
+    // In a real implementation, you'd fetch this data
+    // fetch(`/customers/${customerId}/vehicles/`)
+    //     .then(response => response.json())
+    //     .then(vehicles => {
+    //         vehicles.forEach(vehicle => {
+    //             const option = document.createElement('option');
+    //             option.value = vehicle.id;
+    //             option.textContent = `${vehicle.plate_number} - ${vehicle.make} ${vehicle.model}`;
+    //             vehicleSelect.appendChild(option);
+    //         });
+    //     });
+}
+
+function loadCustomerOrders(customerId) {
+    // This would typically fetch from an API endpoint
+    const ordersContainer = document.getElementById('customer-orders');
+    ordersContainer.innerHTML = '<small class="text-muted">Loading order history...</small>';
+    
+    // In a real implementation, you'd fetch this data
+    setTimeout(() => {
+        ordersContainer.innerHTML = '<small class="text-muted">No previous orders found</small>';
+    }, 1000);
+}
+
+function clearSelectedCustomer() {
+    selectedCustomer = null;
+    document.getElementById('selected-customer').style.display = 'none';
+    document.getElementById('no-customer-selected').style.display = 'block';
+    document.getElementById('order-form-section').style.display = 'none';
+    document.getElementById('customer-search').value = '';
+    showRecentCustomers();
+}
+
+function createQuickCustomer() {
+    const form = document.getElementById('quick-customer-form');
+    const formData = new FormData(form);
+    
+    // Validate required fields
+    if (!formData.get('full_name') || !formData.get('phone') || !formData.get('customer_type')) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    // In a real implementation, you'd submit this to create a customer
+    fetch('/customers/quick-create/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddCustomerModal'));
+            modal.hide();
+            
+            // Select the newly created customer
+            selectCustomer(data.customer.id);
+            
+            // Show success message
+            showNotification('Customer created successfully!', 'success');
+        } else {
+            alert('Error creating customer: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error creating customer:', error);
+        alert('Error creating customer');
+    });
+}
+
+function submitOrder(formData) {
+    const submitBtn = document.querySelector('#create-order-form button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Order created successfully!', 'success');
+            
+            // Redirect to order detail or orders list
+            if (data.order_id) {
+                window.location.href = `/orders/${data.order_id}/`;
+            } else {
+                window.location.href = '/orders/';
+            }
+        } else {
+            throw new Error(data.message || 'Error creating order');
+        }
+    })
+    .catch(error => {
+        console.error('Error creating order:', error);
+        showNotification('Error creating order: ' + error.message, 'danger');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+}
 </script>
 {% endblock %}
