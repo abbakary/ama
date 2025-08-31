@@ -836,3 +836,159 @@ def update_inquiry_status(request: HttpRequest, pk: int):
             messages.error(request, 'Invalid status')
 
     return redirect('tracker:inquiries')
+
+
+@login_required
+def reports_advanced(request: HttpRequest):
+    """Advanced reports with period and type filters"""
+    from datetime import timedelta
+
+    period = request.GET.get('period', 'monthly')
+    report_type = request.GET.get('type', 'overview')
+
+    # Calculate date range based on period
+    today = timezone.localdate()
+    if period == 'daily':
+        start_date = today
+        end_date = today
+        date_format = '%H:%M'
+        labels = [f"{i:02d}:00" for i in range(24)]
+    elif period == 'weekly':
+        start_date = today - timedelta(days=6)
+        end_date = today
+        date_format = '%a'
+        labels = [(start_date + timedelta(days=i)).strftime('%a') for i in range(7)]
+    elif period == 'yearly':
+        start_date = today.replace(month=1, day=1)
+        end_date = today
+        date_format = '%b'
+        labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    else:  # monthly
+        start_date = today - timedelta(days=29)
+        end_date = today
+        date_format = '%d'
+        labels = [(start_date + timedelta(days=i)).strftime('%d') for i in range(30)]
+
+    # Base statistics
+    total_orders = Order.objects.filter(created_at__date__range=[start_date, end_date]).count()
+    completed_orders = Order.objects.filter(
+        created_at__date__range=[start_date, end_date],
+        status='completed'
+    ).count()
+    pending_orders = Order.objects.filter(
+        created_at__date__range=[start_date, end_date],
+        status__in=['created', 'assigned', 'in_progress']
+    ).count()
+    total_customers = Customer.objects.filter(registration_date__date__range=[start_date, end_date]).count()
+
+    completion_rate = int((completed_orders * 100) / total_orders) if total_orders > 0 else 0
+
+    # Average duration
+    avg_duration_qs = Order.objects.filter(
+        created_at__date__range=[start_date, end_date],
+        actual_duration__isnull=False
+    ).aggregate(avg_duration=Avg('actual_duration'))
+    avg_duration = int(avg_duration_qs['avg_duration'] or 0)
+
+    stats = {
+        'total_orders': total_orders,
+        'completed_orders': completed_orders,
+        'pending_orders': pending_orders,
+        'total_customers': total_customers,
+        'completion_rate': completion_rate,
+        'avg_duration': avg_duration,
+        'new_customers': total_customers,
+        'avg_service_time': avg_duration,
+        # Order type breakdown
+        'service_orders': Order.objects.filter(
+            created_at__date__range=[start_date, end_date], type='service'
+        ).count(),
+        'sales_orders': Order.objects.filter(
+            created_at__date__range=[start_date, end_date], type='sales'
+        ).count(),
+        'consultation_orders': Order.objects.filter(
+            created_at__date__range=[start_date, end_date], type='consultation'
+        ).count(),
+    }
+
+    # Calculate percentages
+    if total_orders > 0:
+        stats['service_percentage'] = int((stats['service_orders'] * 100) / total_orders)
+        stats['sales_percentage'] = int((stats['sales_orders'] * 100) / total_orders)
+        stats['consultation_percentage'] = int((stats['consultation_orders'] * 100) / total_orders)
+    else:
+        stats['service_percentage'] = stats['sales_percentage'] = stats['consultation_percentage'] = 0
+
+    # Generate sample chart data
+    import random
+    chart_data = {
+        'trend': {
+            'labels': labels,
+            'values': [random.randint(5, 25) for _ in labels]
+        },
+        'status': {
+            'labels': ['Created', 'Assigned', 'In Progress', 'Completed', 'Cancelled'],
+            'values': [
+                Order.objects.filter(created_at__date__range=[start_date, end_date], status='created').count(),
+                Order.objects.filter(created_at__date__range=[start_date, end_date], status='assigned').count(),
+                Order.objects.filter(created_at__date__range=[start_date, end_date], status='in_progress').count(),
+                Order.objects.filter(created_at__date__range=[start_date, end_date], status='completed').count(),
+                Order.objects.filter(created_at__date__range=[start_date, end_date], status='cancelled').count(),
+            ]
+        },
+        'orders': {
+            'labels': ['Service', 'Sales', 'Consultation'],
+            'values': [stats['service_orders'], stats['sales_orders'], stats['consultation_orders']]
+        },
+        'growth': {
+            'labels': labels,
+            'values': [random.randint(2, 10) for _ in labels]
+        },
+        'types': {
+            'labels': ['Personal', 'Company', 'Government', 'NGO', 'Bodaboda'],
+            'values': [
+                Customer.objects.filter(registration_date__date__range=[start_date, end_date], customer_type='personal').count(),
+                Customer.objects.filter(registration_date__date__range=[start_date, end_date], customer_type='company').count(),
+                Customer.objects.filter(registration_date__date__range=[start_date, end_date], customer_type='government').count(),
+                Customer.objects.filter(registration_date__date__range=[start_date, end_date], customer_type='ngo').count(),
+                Customer.objects.filter(registration_date__date__range=[start_date, end_date], customer_type='bodaboda').count(),
+            ]
+        },
+        'inquiries': {
+            'labels': labels,
+            'values': [random.randint(1, 8) for _ in labels]
+        },
+        'response': {
+            'labels': labels,
+            'values': [random.uniform(0.5, 4.0) for _ in labels]
+        },
+        'revenue': {
+            'labels': labels,
+            'values': [random.randint(500, 2000) for _ in labels]
+        }
+    }
+
+    # Get data items based on report type
+    if report_type == 'customers':
+        data_items = Customer.objects.filter(
+            registration_date__date__range=[start_date, end_date]
+        ).order_by('-registration_date')[:20]
+    elif report_type == 'inquiries':
+        data_items = Order.objects.filter(
+            created_at__date__range=[start_date, end_date],
+            type='consultation'
+        ).select_related('customer').order_by('-created_at')[:20]
+    else:
+        data_items = Order.objects.filter(
+            created_at__date__range=[start_date, end_date]
+        ).select_related('customer').order_by('-created_at')[:20]
+
+    context = {
+        'period': period,
+        'report_type': report_type,
+        'stats': stats,
+        'chart_data': json.dumps(chart_data),
+        'data_items': data_items,
+    }
+
+    return render(request, 'tracker/reports_advanced.html', context)
