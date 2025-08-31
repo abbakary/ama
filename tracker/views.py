@@ -641,3 +641,47 @@ def customer_edit(request: HttpRequest, pk: int):
     else:
         form = CustomerEditForm(instance=customer)
     return render(request, 'tracker/customer_edit.html', { 'form': form, 'customer': customer })
+
+
+@login_required
+def customers_quick_create(request: HttpRequest):
+    """Quick customer creation for order form"""
+    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        try:
+            full_name = request.POST.get('full_name', '').strip()
+            phone = request.POST.get('phone', '').strip()
+            email = request.POST.get('email', '').strip()
+            customer_type = request.POST.get('customer_type', 'personal')
+
+            if not full_name or not phone:
+                return JsonResponse({'success': False, 'message': 'Name and phone are required'})
+
+            # Check if customer with this phone already exists
+            if Customer.objects.filter(phone=phone).exists():
+                return JsonResponse({'success': False, 'message': 'Customer with this phone number already exists'})
+
+            # Create customer
+            customer = Customer.objects.create(
+                full_name=full_name,
+                phone=phone,
+                email=email if email else None,
+                customer_type=customer_type
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Customer created successfully',
+                'customer': {
+                    'id': customer.id,
+                    'name': customer.full_name,
+                    'phone': customer.phone,
+                    'email': customer.email or '',
+                    'code': customer.code,
+                    'type': customer.customer_type
+                }
+            })
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Error creating customer: {str(e)}'})
+
+    return JsonResponse({'success': False, 'message': 'Invalid request'})
