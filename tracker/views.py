@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpRequest, HttpResponse
-from django.db.models import Count, Avg
+from django.db.models import Count, Avg, Q
 from django.utils import timezone
 from django.contrib.auth.views import LoginView
 from django.contrib import messages
