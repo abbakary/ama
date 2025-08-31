@@ -26,7 +26,7 @@ class Customer(models.Model):
     address = models.TextField(blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
 
-    customer_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default="personal")
+    customer_type = models.CharField(max_length=20, choices=TYPE_CHOICES, null=True, blank=True)
     organization_name = models.CharField(max_length=255, blank=True, null=True)
     tax_number = models.CharField(max_length=64, blank=True, null=True)
     personal_subtype = models.CharField(max_length=16, choices=PERSONAL_SUBTYPE, blank=True, null=True)
