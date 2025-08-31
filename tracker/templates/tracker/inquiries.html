@@ -1,0 +1,450 @@
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block page_title %}Inquiries{% endblock %}
+{% block breadcrumb %}Inquiries{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h4 mb-0">
+        <i class="fas fa-question-circle text-primary"></i>
+        Customer Inquiries
+    </h2>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#bulkResponseModal">
+            <i class="fas fa-reply-all"></i> Bulk Response
+        </button>
+        <a href="{% url 'tracker:customer_register' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Inquiry
+        </a>
+    </div>
+</div>
+
+<!-- Filter Section -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body py-3">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label small">Inquiry Type</label>
+                        <select name="type" class="form-select form-select-sm">
+                            <option value="">All Types</option>
+                            <option value="Pricing" {% if request.GET.type == 'Pricing' %}selected{% endif %}>Pricing</option>
+                            <option value="Services" {% if request.GET.type == 'Services' %}selected{% endif %}>Services</option>
+                            <option value="Appointment Booking" {% if request.GET.type == 'Appointment Booking' %}selected{% endif %}>Appointment Booking</option>
+                            <option value="General" {% if request.GET.type == 'General' %}selected{% endif %}>General</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Status</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">All Status</option>
+                            <option value="created" {% if request.GET.status == 'created' %}selected{% endif %}>New</option>
+                            <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                            <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Resolved</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Follow-up Required</label>
+                        <select name="follow_up" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            <option value="required" {% if request.GET.follow_up == 'required' %}selected{% endif %}>Required</option>
+                            <option value="overdue" {% if request.GET.follow_up == 'overdue' %}selected{% endif %}>Overdue</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex gap-1">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
+                            <a href="{% url 'tracker:inquiries' %}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-times"></i> Clear
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body py-3">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="text-primary h5 mb-1">{{ stats.new|default:0 }}</div>
+                        <div class="small text-muted">New</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-warning h5 mb-1">{{ stats.in_progress|default:0 }}</div>
+                        <div class="small text-muted">In Progress</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-success h5 mb-1">{{ stats.resolved|default:0 }}</div>
+                        <div class="small text-muted">Resolved</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Inquiries List -->
+<div class="row">
+    {% for inquiry in inquiries %}
+    <div class="col-lg-6 mb-4">
+        <div class="card inquiry-card h-100 {% if inquiry.follow_up_date and inquiry.follow_up_date <= today and inquiry.status != 'completed' %}border-warning{% endif %}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="badge bg-{{ inquiry.inquiry_type|default:'secondary' }}">
+                        {{ inquiry.inquiry_type|default:'General' }}
+                    </span>
+                    <span class="badge 
+                        {% if inquiry.status == 'completed' %}bg-success
+                        {% elif inquiry.status == 'in_progress' %}bg-warning text-dark
+                        {% else %}bg-secondary
+                        {% endif %}">
+                        {% if inquiry.status == 'completed' %}Resolved
+                        {% elif inquiry.status == 'in_progress' %}In Progress
+                        {% else %}New
+                        {% endif %}
+                    </span>
+                </div>
+                <small class="text-muted">{{ inquiry.created_at|date:"M d, H:i" }}</small>
+            </div>
+            <div class="card-body">
+                <!-- Customer Info -->
+                <div class="d-flex align-items-start mb-3">
+                    <div class="user-avatar me-3" style="width: 40px; height: 40px; font-size: 14px;">
+                        {{ inquiry.customer.full_name|slice:":2"|upper }}
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">{{ inquiry.customer.full_name }}</h6>
+                        <div class="text-muted small">
+                            <i class="fas fa-phone fa-xs"></i> {{ inquiry.customer.phone }}
+                            {% if inquiry.customer.email %}
+                            <br><i class="fas fa-envelope fa-xs"></i> {{ inquiry.customer.email }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inquiry Details -->
+                <div class="mb-3">
+                    <h6 class="text-muted mb-2">Question:</h6>
+                    <p class="mb-0">{{ inquiry.questions|truncatewords:30 }}</p>
+                </div>
+
+                <!-- Follow-up Info -->
+                {% if inquiry.follow_up_date %}
+                <div class="mb-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-calendar-alt text-info me-2"></i>
+                        <span class="small {% if inquiry.follow_up_date <= today and inquiry.status != 'completed' %}text-warning fw-bold{% else %}text-muted{% endif %}">
+                            Follow-up: {{ inquiry.follow_up_date|date:"M d, Y" }}
+                            {% if inquiry.follow_up_date <= today and inquiry.status != 'completed' %}
+                                <span class="badge bg-warning text-dark ms-1">Due</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Contact Preference -->
+                {% if inquiry.contact_preference %}
+                <div class="mb-3">
+                    <span class="badge bg-info">
+                        <i class="fas fa-{% if inquiry.contact_preference == 'email' %}envelope{% elif inquiry.contact_preference == 'whatsapp' %}comment{% else %}phone{% endif %}"></i>
+                        Prefers {{ inquiry.contact_preference|title }}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                onclick="viewInquiry({{ inquiry.id }})" data-bs-toggle="modal" data-bs-target="#inquiryModal">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                        {% if inquiry.status != 'completed' %}
+                        <button type="button" class="btn btn-sm btn-outline-success" 
+                                onclick="respondToInquiry({{ inquiry.id }})" data-bs-toggle="modal" data-bs-target="#responseModal">
+                            <i class="fas fa-reply"></i> Respond
+                        </button>
+                        {% endif %}
+                    </div>
+                    
+                    {% if inquiry.status != 'completed' %}
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <form method="post" action="{% url 'tracker:update_inquiry_status' inquiry.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="status" value="in_progress">
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="fas fa-play text-warning"></i> Mark In Progress
+                                    </button>
+                                </form>
+                            </li>
+                            <li>
+                                <form method="post" action="{% url 'tracker:update_inquiry_status' inquiry.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="status" value="completed">
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="fas fa-check text-success"></i> Mark Resolved
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-question-circle fa-3x text-muted mb-3 opacity-25"></i>
+            <h5 class="text-muted mb-2">No Inquiries Found</h5>
+            <p class="text-muted mb-4">No customer inquiries match your current filters.</p>
+            <a href="{% url 'tracker:customer_register' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create First Inquiry
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if inquiries.has_other_pages %}
+<nav aria-label="Inquiries pagination">
+    <ul class="pagination justify-content-center">
+        {% if inquiries.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ inquiries.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                <i class="fas fa-chevron-left"></i> Previous
+            </a>
+        </li>
+        {% endif %}
+
+        {% for num in inquiries.paginator.page_range %}
+        {% if inquiries.number == num %}
+        <li class="page-item active">
+            <span class="page-link">{{ num }}</span>
+        </li>
+        {% elif num > inquiries.number|add:'-3' and num < inquiries.number|add:'3' %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+        </li>
+        {% endif %}
+        {% endfor %}
+
+        {% if inquiries.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ inquiries.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                Next <i class="fas fa-chevron-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Inquiry Detail Modal -->
+<div class="modal fade" id="inquiryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Inquiry Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="inquiry-details">
+                <!-- Content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Response Modal -->
+<div class="modal fade" id="responseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Respond to Inquiry</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="response-form">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" name="inquiry_id" id="response-inquiry-id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Response *</label>
+                        <textarea name="response" class="form-control" rows="6" required 
+                                placeholder="Enter your response to the customer..."></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="follow_up_required" id="follow-up-check">
+                                <label class="form-check-label" for="follow-up-check">
+                                    Follow-up required
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <input type="date" name="follow_up_date" class="form-control" 
+                                   placeholder="Follow-up date" disabled id="follow-up-date">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Send Response
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Response Modal -->
+<div class="modal fade" id="bulkResponseModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bulk Response</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Response Template</label>
+                    <select class="form-select" id="response-template">
+                        <option value="">Select a template</option>
+                        <option value="pricing">General Pricing Response</option>
+                        <option value="services">Services Information</option>
+                        <option value="appointment">Appointment Booking</option>
+                        <option value="custom">Custom Response</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Message</label>
+                    <textarea class="form-control" rows="4" id="bulk-message" 
+                            placeholder="Enter your response message..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="sendBulkResponse()">
+                    <i class="fas fa-paper-plane"></i> Send to All New Inquiries
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function viewInquiry(inquiryId) {
+    fetch(`/inquiries/${inquiryId}/`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('inquiry-details').innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Customer Information</h6>
+                        <p><strong>Name:</strong> ${data.customer.name}<br>
+                        <strong>Phone:</strong> ${data.customer.phone}<br>
+                        <strong>Email:</strong> ${data.customer.email || 'Not provided'}</p>
+                        
+                        <h6>Inquiry Details</h6>
+                        <p><strong>Type:</strong> ${data.inquiry_type}<br>
+                        <strong>Contact Preference:</strong> ${data.contact_preference}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Status & Dates</h6>
+                        <p><strong>Status:</strong> <span class="badge bg-${data.status === 'completed' ? 'success' : data.status === 'in_progress' ? 'warning' : 'secondary'}">${data.status_display}</span><br>
+                        <strong>Created:</strong> ${new Date(data.created_at).toLocaleDateString()}<br>
+                        <strong>Follow-up:</strong> ${data.follow_up_date ? new Date(data.follow_up_date).toLocaleDateString() : 'Not set'}</p>
+                    </div>
+                </div>
+                <hr>
+                <h6>Question/Details</h6>
+                <div class="bg-light p-3 rounded">${data.questions}</div>
+                ${data.responses && data.responses.length > 0 ? `
+                    <hr>
+                    <h6>Responses</h6>
+                    ${data.responses.map(response => `
+                        <div class="border-start border-primary ps-3 mb-2">
+                            <small class="text-muted">${new Date(response.created_at).toLocaleDateString()}</small>
+                            <p class="mb-0">${response.message}</p>
+                        </div>
+                    `).join('')}
+                ` : ''}
+            `;
+        })
+        .catch(error => {
+            console.error('Error loading inquiry:', error);
+            document.getElementById('inquiry-details').innerHTML = '<div class="text-danger">Error loading inquiry details</div>';
+        });
+}
+
+function respondToInquiry(inquiryId) {
+    document.getElementById('response-inquiry-id').value = inquiryId;
+    document.getElementById('response-form').action = `/inquiries/${inquiryId}/respond/`;
+}
+
+// Follow-up checkbox handler
+document.getElementById('follow-up-check').addEventListener('change', function() {
+    const followUpDate = document.getElementById('follow-up-date');
+    followUpDate.disabled = !this.checked;
+    if (this.checked) {
+        followUpDate.focus();
+    } else {
+        followUpDate.value = '';
+    }
+});
+
+// Response templates
+const templates = {
+    pricing: "Thank you for your inquiry about our pricing. We offer competitive rates for all our services. Please let us know your specific requirements, and we'll provide you with a detailed quote.",
+    services: "Thank you for your interest in our services. We offer comprehensive car maintenance, tire sales, and consultation services. Our experienced team is ready to help you with all your automotive needs.",
+    appointment: "Thank you for wanting to book an appointment with us. Please let us know your preferred date and time, and we'll do our best to accommodate your schedule.",
+    custom: ""
+};
+
+document.getElementById('response-template').addEventListener('change', function() {
+    const template = templates[this.value] || '';
+    document.getElementById('bulk-message').value = template;
+});
+
+function sendBulkResponse() {
+    const message = document.getElementById('bulk-message').value.trim();
+    if (!message) {
+        alert('Please enter a response message');
+        return;
+    }
+    
+    // In a real implementation, this would send the response to all new inquiries
+    alert('Bulk response sent to all new inquiries');
+    bootstrap.Modal.getInstance(document.getElementById('bulkResponseModal')).hide();
+}
+
+// Auto-refresh inquiries every 5 minutes
+setInterval(() => {
+    location.reload();
+}, 300000);
+</script>
+{% endblock %}

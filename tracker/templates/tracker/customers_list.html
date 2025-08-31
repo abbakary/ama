@@ -1,114 +1,210 @@
-{% extends 'tracker/base.html' %} {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h2 class="display-6 m-0">Customers</h2>
-  <div class="d-flex gap-2">
-    <form class="d-flex gap-2" method="get">
-      <input
-        class="form-control"
-        name="q"
-        value="{{ q }}"
-        placeholder="Search name or phone"
-      />
-      <button class="btn btn-outline-secondary">Search</button>
-    </form>
-    <a
-      class="btn btn-outline-secondary"
-      href="{% url 'tracker:customers_export' %}?{{ request.GET.urlencode }}"
-      ><i class="bi bi-download"></i> Export</a
-    >
-    <a href="{% url 'tracker:customer_register' %}" class="btn btn-primary"
-      ><i class="bi bi-person-plus"></i> Register</a
-    >
-  </div>
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block page_title %}Customers{% endblock %}
+{% block breadcrumb %}Customers{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h4 mb-0">Customer Management</h2>
+    <a href="{% url 'tracker:customer_register' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add Customer
+    </a>
 </div>
-<div class="card shadow-sm">
-  <div class="card-body table-responsive">
-    <table class="table align-middle">
-      <thead>
-        <tr>
-          <th>Code</th>
-          <th>Name</th>
-          <th>Phone</th>
-          <th>Type</th>
-          <th>Visits</th>
-          <th>Last Visit</th>
-          <th>Status</th>
-          <th class="text-end">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in customers %}
-        <tr>
-          <td class="text-muted small">{{ c.code }}</td>
-          <td class="fw-semibold">{{ c.full_name }}</td>
-          <td>{{ c.phone }}</td>
-          <td>
-            <span class="pill pill-{{ c.customer_type }}"
-              >{{ c.customer_type|upper }}</span
-            >
-          </td>
-          <td>{{ c.total_visits }}</td>
-          <td>{{ c.last_visit|date:'Y-m-d H:i' }}</td>
-          <td>
-            <span class="pill pill-{{ c.current_status }}"
-              >{{ c.current_status|upper }}</span
-            >
-          </td>
-          <td class="text-end">
-            <a
-              class="btn btn-sm btn-outline-secondary"
-              href="{% url 'tracker:customer_detail' c.id %}"
-              ><i class="bi bi-box-arrow-in-right"></i> View</a
-            >
-            <a
-              class="btn btn-sm btn-outline-primary"
-              href="{% url 'tracker:customer_edit' c.id %}"
-              ><i class="bi bi-pencil"></i> Edit</a
-            >
-            <a
-              class="btn btn-sm btn-success"
-              href="{% url 'tracker:create_order_for_customer' c.id %}"
-              ><i class="bi bi-plus-circle"></i> New Order</a
-            >
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="8" class="text-muted">No customers found.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% if customers.paginator %}
-    <nav class="d-flex justify-content-between align-items-center">
-      <div class="small text-muted">
-        Page {{ customers.number }} of {{ customers.paginator.num_pages }}
-      </div>
-      <ul class="pagination m-0">
-        {% if customers.has_previous %}
-        <li class="page-item">
-          <a
-            class="page-link"
-            href="?q={{ q }}&page={{ customers.previous_page_number }}"
-            >Prev</a
-          >
-        </li>
-        {% else %}
-        <li class="page-item disabled"><span class="page-link">Prev</span></li>
-        {% endif %} {% if customers.has_next %}
-        <li class="page-item">
-          <a
-            class="page-link"
-            href="?q={{ q }}&page={{ customers.next_page_number }}"
-            >Next</a
-          >
-        </li>
-        {% else %}
-        <li class="page-item disabled"><span class="page-link">Next</span></li>
-        {% endif %}
-      </ul>
-    </nav>
+
+<!-- Search and Filter Section -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" name="q" value="{{ q }}" class="form-control" 
+                           placeholder="Search customers by name, phone, or email...">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                    <a href="{% url 'tracker:customers_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Clear
+                    </a>
+                    <a href="{% url 'tracker:customers_export' %}{% if q %}?q={{ q }}{% endif %}" 
+                       class="btn btn-outline-success">
+                        <i class="fas fa-download"></i> Export
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Customers Table -->
+<div class="card">
+    <div class="card-header">
+        <h4 style="color: white; margin: 0;">
+            <i class="fas fa-users"></i> Customers List
+            {% if q %}<small class="ms-2 opacity-75">Search results for "{{ q }}"</small>{% endif %}
+        </h4>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr style="background-color: #f5f6fa; color: #2c3e50;">
+                        <th>#</th>
+                        <th>Customer Code</th>
+                        <th>Name & Contact</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Visits</th>
+                        <th>Last Visit</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in customers %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            <span class="fw-bold text-primary">{{ customer.code }}</span>
+                        </td>
+                        <td>
+                            <div>
+                                <div class="fw-medium">{{ customer.full_name }}</div>
+                                <small class="text-muted">
+                                    <i class="fas fa-phone fa-xs"></i> {{ customer.phone }}
+                                    {% if customer.email %}
+                                    <br><i class="fas fa-envelope fa-xs"></i> {{ customer.email }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge 
+                                {% if customer.customer_type == 'personal' %}bg-info
+                                {% elif customer.customer_type == 'company' %}bg-success
+                                {% elif customer.customer_type == 'government' %}bg-warning text-dark
+                                {% elif customer.customer_type == 'ngo' %}bg-purple
+                                {% elif customer.customer_type == 'bodaboda' %}bg-secondary
+                                {% endif %}">
+                                {{ customer.get_customer_type_display }}
+                            </span>
+                            {% if customer.organization_name %}
+                            <br><small class="text-muted">{{ customer.organization_name }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge 
+                                {% if customer.current_status == 'arrived' %}bg-info
+                                {% elif customer.current_status == 'in_service' %}bg-warning text-dark
+                                {% elif customer.current_status == 'completed' %}bg-success
+                                {% elif customer.current_status == 'departed' %}bg-secondary
+                                {% endif %}">
+                                {{ customer.get_current_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">{{ customer.total_visits }}</span>
+                        </td>
+                        <td>
+                            {% if customer.last_visit %}
+                            <div>
+                                <div>{{ customer.last_visit|date:"M d, Y" }}</div>
+                                <small class="text-muted">{{ customer.last_visit|time:"H:i" }}</small>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">Never</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'tracker:customer_detail' customer.id %}" 
+                                   class="btn btn-sm btn-outline-primary" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'tracker:customer_edit' customer.id %}" 
+                                   class="btn btn-sm btn-outline-warning" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'tracker:create_order_for_customer' customer.id %}" 
+                                   class="btn btn-sm btn-outline-success" title="Create Order">
+                                    <i class="fas fa-plus"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="fas fa-users fa-3x mb-3 opacity-25"></i><br>
+                            {% if q %}
+                            No customers found matching "{{ q }}"
+                            {% else %}
+                            No customers found. <a href="{% url 'tracker:customer_register' %}">Add your first customer</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    {% if customers.has_other_pages %}
+    <div class="card-footer d-flex justify-content-between align-items-center" 
+         style="background-color: #f8f9fa; border-top: 1px solid #e9ecef;">
+        <div class="text-muted">
+            Showing {{ customers.start_index }} to {{ customers.end_index }} of {{ customers.paginator.count }} customers
+        </div>
+        <nav aria-label="Page navigation">
+            <ul class="pagination pagination-sm mb-0">
+                {% if customers.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ customers.previous_page_number }}{% if q %}&q={{ q }}{% endif %}">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link"><i class="fas fa-chevron-left"></i> Previous</span>
+                </li>
+                {% endif %}
+
+                {% for num in customers.paginator.page_range %}
+                {% if customers.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+                {% elif num > customers.number|add:'-3' and num < customers.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if q %}&q={{ q }}{% endif %}">{{ num }}</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+
+                {% if customers.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ customers.next_page_number }}{% if q %}&q={{ q }}{% endif %}">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Next <i class="fas fa-chevron-right"></i></span>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
     {% endif %}
-  </div>
 </div>
+
+<style>
+.bg-purple {
+    background-color: #6f42c1 !important;
+}
+</style>
 {% endblock %}

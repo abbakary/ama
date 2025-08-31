@@ -1,233 +1,252 @@
-{% extends 'tracker/base.html' %} {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h2 class="display-6 m-0">Orders</h2>
-  <div class="d-flex gap-2 align-items-center">
-    <form class="d-flex gap-2" method="get">
-      <select name="status" class="form-select form-select-sm">
-        <option
-          value="all"
-          {%
-          if
-          request.GET.status
-          %}{%
-          if
-          request.GET.status=""
-          ="all"
-          %}selected{%
-          endif
-          %}{%
-          else
-          %}selected{%
-          endif
-          %}
-        >
-          All Statuses
-        </option>
-        <option
-          value="created"
-          {%
-          if
-          request.GET.status=""
-          ="created"
-          %}selected{%
-          endif
-          %}
-        >
-          Created
-        </option>
-        <option
-          value="assigned"
-          {%
-          if
-          request.GET.status=""
-          ="assigned"
-          %}selected{%
-          endif
-          %}
-        >
-          Assigned
-        </option>
-        <option
-          value="in_progress"
-          {%
-          if
-          request.GET.status=""
-          ="in_progress"
-          %}selected{%
-          endif
-          %}
-        >
-          In Progress
-        </option>
-        <option
-          value="completed"
-          {%
-          if
-          request.GET.status=""
-          ="completed"
-          %}selected{%
-          endif
-          %}
-        >
-          Completed
-        </option>
-        <option
-          value="cancelled"
-          {%
-          if
-          request.GET.status=""
-          ="cancelled"
-          %}selected{%
-          endif
-          %}
-        >
-          Cancelled
-        </option>
-      </select>
-      <select name="type" class="form-select form-select-sm">
-        <option
-          value="all"
-          {%
-          if
-          request.GET.type
-          %}{%
-          if
-          request.GET.type=""
-          ="all"
-          %}selected{%
-          endif
-          %}{%
-          else
-          %}selected{%
-          endif
-          %}
-        >
-          All Types
-        </option>
-        <option
-          value="service"
-          {%
-          if
-          request.GET.type=""
-          ="service"
-          %}selected{%
-          endif
-          %}
-        >
-          Service
-        </option>
-        <option
-          value="sales"
-          {%
-          if
-          request.GET.type=""
-          ="sales"
-          %}selected{%
-          endif
-          %}
-        >
-          Sales
-        </option>
-        <option
-          value="consultation"
-          {%
-          if
-          request.GET.type=""
-          ="consultation"
-          %}selected{%
-          endif
-          %}
-        >
-          Consultation
-        </option>
-      </select>
-      <button class="btn btn-outline-secondary btn-sm">Filter</button>
-    </form>
-    <a
-      class="btn btn-outline-secondary btn-sm"
-      href="{% url 'tracker:orders_export' %}?{{ request.GET.urlencode }}"
-      ><i class="bi bi-download"></i> Export CSV</a
-    >
-  </div>
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block page_title %}Orders{% endblock %}
+{% block breadcrumb %}Orders{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h4 mb-0">Order Management</h2>
+    <a href="{% url 'tracker:order_start' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Create Order
+    </a>
 </div>
-<div class="card shadow-sm">
-  <div class="card-body table-responsive">
-    <table class="table align-middle">
-      <thead>
-        <tr>
-          <th>Order</th>
-          <th>Customer</th>
-          <th>Type</th>
-          <th>Status</th>
-          <th>Priority</th>
-          <th>Vehicle</th>
-          <th>Created</th>
-          <th class="text-end">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for o in orders %}
-        <tr>
-          <td>
-            <a href="{% url 'tracker:order_detail' o.id %}"
-              >{{ o.order_number }}</a
-            >
-          </td>
-          <td>
-            <a href="{% url 'tracker:customer_detail' o.customer.id %}"
-              >{{ o.customer.full_name }}</a
-            >
-          </td>
-          <td>{{ o.type|title }}</td>
-          <td>
-            <span class="pill pill-{{ o.status }}">{{ o.status|upper }}</span>
-          </td>
-          <td>
-            <span class="pill pill-priority-{{ o.priority }}"
-              >{{ o.priority|upper }}</span
-            >
-          </td>
-          <td>
-            {% if o.vehicle %}{{ o.vehicle.plate_number }}{% else %}-{% endif %}
-          </td>
-          <td>{{ o.created_at|date:'Y-m-d H:i' }}</td>
-          <td class="text-end">
-            <form
-              method="post"
-              action="{% url 'tracker:update_order_status' o.id %}"
-              class="d-inline-flex align-items-center gap-2"
-            >
-              {% csrf_token %}
-              <select
-                name="status"
-                class="form-select form-select-sm js-status-select"
-              >
-                {% for val,label in o.STATUS_CHOICES %}
-                <option
-                  value="{{ val }}"
-                  {%
-                  if
-                  o.status=""
-                  ="val"
-                  %}selected{%
-                  endif
-                  %}
-                >
-                  {{ label }}
-                </option>
-                {% endfor %}
-              </select>
-              <button class="btn btn-sm btn-primary">Update</button>
-            </form>
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="8" class="text-muted">No orders.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+
+<!-- Filter Section -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="all">All Statuses</option>
+                    <option value="created" {% if request.GET.status == 'created' %}selected{% endif %}>Created</option>
+                    <option value="assigned" {% if request.GET.status == 'assigned' %}selected{% endif %}>Assigned</option>
+                    <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                    <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Type</label>
+                <select name="type" class="form-select">
+                    <option value="all">All Types</option>
+                    <option value="service" {% if request.GET.type == 'service' %}selected{% endif %}>Service</option>
+                    <option value="sales" {% if request.GET.type == 'sales' %}selected{% endif %}>Sales</option>
+                    <option value="consultation" {% if request.GET.type == 'consultation' %}selected{% endif %}>Consultation</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                    <a href="{% url 'tracker:orders_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Clear
+                    </a>
+                    <a href="{% url 'tracker:orders_export' %}?status={{ request.GET.status|default:'all' }}&type={{ request.GET.type|default:'all' }}" 
+                       class="btn btn-outline-success">
+                        <i class="fas fa-download"></i> Export
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Orders Table -->
+<div class="card">
+    <div class="card-header">
+        <h4 style="color: white; margin: 0;">
+            <i class="fas fa-shopping-cart"></i> Orders List
+            {% if request.GET.status != 'all' and request.GET.status %}
+            <small class="ms-2 opacity-75">{{ request.GET.status|title }} Orders</small>
+            {% endif %}
+        </h4>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr style="background-color: #f5f6fa; color: #2c3e50;">
+                        <th>#</th>
+                        <th>Order ID</th>
+                        <th>Customer</th>
+                        <th>Vehicle</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            <span class="fw-bold text-primary">{{ order.order_number }}</span>
+                        </td>
+                        <td>
+                            <div>
+                                <div class="fw-medium">{{ order.customer.full_name }}</div>
+                                <small class="text-muted">{{ order.customer.phone }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            {% if order.vehicle %}
+                            <div>
+                                <div class="fw-medium">{{ order.vehicle.plate_number }}</div>
+                                <small class="text-muted">{{ order.vehicle.make }} {{ order.vehicle.model }}</small>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">No vehicle</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge 
+                                {% if order.type == 'service' %}bg-info
+                                {% elif order.type == 'sales' %}bg-success
+                                {% elif order.type == 'consultation' %}bg-warning text-dark
+                                {% endif %}">
+                                {{ order.get_type_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge 
+                                {% if order.status == 'completed' %}bg-success
+                                {% elif order.status == 'in_progress' %}bg-info
+                                {% elif order.status == 'assigned' %}bg-warning text-dark
+                                {% elif order.status == 'created' %}bg-secondary
+                                {% elif order.status == 'cancelled' %}bg-danger
+                                {% endif %}">
+                                {{ order.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge 
+                                {% if order.priority == 'urgent' %}bg-danger
+                                {% elif order.priority == 'high' %}bg-warning text-dark
+                                {% elif order.priority == 'medium' %}bg-info
+                                {% elif order.priority == 'low' %}bg-secondary
+                                {% endif %}">
+                                {{ order.get_priority_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <div>
+                                <div>{{ order.created_at|date:"M d, Y" }}</div>
+                                <small class="text-muted">{{ order.created_at|time:"H:i" }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'tracker:order_detail' order.id %}" 
+                                   class="btn btn-sm btn-outline-primary" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if order.status != 'completed' and order.status != 'cancelled' %}
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-warning dropdown-toggle" 
+                                            type="button" data-bs-toggle="dropdown" title="Update Status">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        {% if order.status == 'created' %}
+                                        <li>
+                                            <form method="post" action="{% url 'tracker:update_order_status' order.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="status" value="assigned">
+                                                <button type="submit" class="dropdown-item">
+                                                    <i class="fas fa-user-check text-warning"></i> Assign
+                                                </button>
+                                            </form>
+                                        </li>
+                                        {% endif %}
+                                        {% if order.status in 'created,assigned' %}
+                                        <li>
+                                            <form method="post" action="{% url 'tracker:update_order_status' order.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="status" value="in_progress">
+                                                <button type="submit" class="dropdown-item">
+                                                    <i class="fas fa-play text-info"></i> Start
+                                                </button>
+                                            </form>
+                                        </li>
+                                        {% endif %}
+                                        {% if order.status == 'in_progress' %}
+                                        <li>
+                                            <form method="post" action="{% url 'tracker:update_order_status' order.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="status" value="completed">
+                                                <button type="submit" class="dropdown-item">
+                                                    <i class="fas fa-check text-success"></i> Complete
+                                                </button>
+                                            </form>
+                                        </li>
+                                        {% endif %}
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <form method="post" action="{% url 'tracker:update_order_status' order.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="status" value="cancelled">
+                                                <button type="submit" class="dropdown-item text-danger">
+                                                    <i class="fas fa-times text-danger"></i> Cancel
+                                                </button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            <i class="fas fa-shopping-cart fa-3x mb-3 opacity-25"></i><br>
+                            {% if request.GET.status != 'all' or request.GET.type != 'all' %}
+                            No orders found with current filters
+                            {% else %}
+                            No orders found. <a href="{% url 'tracker:order_start' %}">Create your first order</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    {% if orders %}
+    <div class="card-footer d-flex justify-content-between align-items-center" 
+         style="background-color: #f8f9fa; border-top: 1px solid #e9ecef;">
+        <div class="text-muted">
+            Showing {{ orders|length }} orders
+        </div>
+        <div>
+            <small class="text-muted">Total orders in system: {{ orders|length }}</small>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Order Status Legend -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-title">Status Legend</h6>
+                <div class="d-flex flex-wrap gap-3">
+                    <div><span class="badge bg-secondary me-1">Created</span> Order placed, awaiting assignment</div>
+                    <div><span class="badge bg-warning text-dark me-1">Assigned</span> Assigned to technician</div>
+                    <div><span class="badge bg-info me-1">In Progress</span> Work in progress</div>
+                    <div><span class="badge bg-success me-1">Completed</span> Work completed</div>
+                    <div><span class="badge bg-danger me-1">Cancelled</span> Order cancelled</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

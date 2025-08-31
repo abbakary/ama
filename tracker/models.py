@@ -26,7 +26,7 @@ class Customer(models.Model):
     address = models.TextField(blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
 
-    customer_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default="personal")
+    customer_type = models.CharField(max_length=20, choices=TYPE_CHOICES, null=True, blank=True)
     organization_name = models.CharField(max_length=255, blank=True, null=True)
     tax_number = models.CharField(max_length=64, blank=True, null=True)
     personal_subtype = models.CharField(max_length=16, choices=PERSONAL_SUBTYPE, blank=True, null=True)
@@ -41,7 +41,11 @@ class Customer(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.code:
-            self.code = f"CUST{int(timezone.now().timestamp())}"
+            import uuid
+            self.code = f"CUST{str(uuid.uuid4())[:8].upper()}"
+            # Ensure uniqueness
+            while Customer.objects.filter(code=self.code).exists():
+                self.code = f"CUST{str(uuid.uuid4())[:8].upper()}"
         if not self.arrival_time:
             self.arrival_time = timezone.now()
         super().save(*args, **kwargs)
@@ -107,7 +111,11 @@ class Order(models.Model):
     def save(self, *args, **kwargs):
         creating = self._state.adding
         if not self.order_number:
-            self.order_number = f"ORD{int(timezone.now().timestamp())}"
+            import uuid
+            self.order_number = f"ORD{str(uuid.uuid4())[:8].upper()}"
+            # Ensure uniqueness
+            while Order.objects.filter(order_number=self.order_number).exists():
+                self.order_number = f"ORD{str(uuid.uuid4())[:8].upper()}"
         super().save(*args, **kwargs)
         if creating:
             # Update visit tracking

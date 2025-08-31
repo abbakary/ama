@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("customers/", views.customers_list, name="customers_list"),
     path("customers/search/", views.customers_search, name="customers_search"),
+    path("customers/quick-create/", views.customers_quick_create, name="customers_quick_create"),
     path("customers/register/", views.customer_register, name="customer_register"),
     path("customers/export/", views.customers_export, name="customers_export"),
     path("customers/<int:pk>/", views.customer_detail, name="customer_detail"),
@@ -22,7 +23,14 @@ urlpatterns = [
 
     path("analytics/", views.analytics, name="analytics"),
     path("reports/", views.reports, name="reports"),
+    path("reports/advanced/", views.reports_advanced, name="reports_advanced"),
     path("reports/export/", views.reports_export, name="reports_export"),
+
+    # Inquiry management
+    path("inquiries/", views.inquiries, name="inquiries"),
+    path("inquiries/<int:pk>/", views.inquiry_detail, name="inquiry_detail"),
+    path("inquiries/<int:pk>/respond/", views.inquiry_respond, name="inquiry_respond"),
+    path("inquiries/<int:pk>/status/", views.update_inquiry_status, name="update_inquiry_status"),
 
     # Inventory (manager/admin)
     path("inventory/", views.inventory_list, name="inventory_list"),

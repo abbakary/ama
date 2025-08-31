@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpRequest, HttpResponse
-from django.db.models import Count, Avg
+from django.db.models import Count, Avg, Q
 from django.utils import timezone
 from django.contrib.auth.views import LoginView
 from django.contrib import messages
@@ -17,6 +17,7 @@ from .forms import (
     CustomerStep4Form,
     VehicleForm,
     OrderForm,
+    CustomerEditForm,
 )
 
 
@@ -129,17 +130,41 @@ def customers_list(request: HttpRequest):
 @login_required
 def customers_search(request: HttpRequest):
     q = request.GET.get("q", "").strip()
+    customer_id = request.GET.get("id")
+    recent = request.GET.get("recent")
+
     results = []
-    if q:
-        results = Customer.objects.filter(full_name__icontains=q)[:10]
+
+    if customer_id:
+        # Get specific customer by ID
+        try:
+            customer = Customer.objects.get(id=customer_id)
+            results = [customer]
+        except Customer.DoesNotExist:
+            pass
+    elif recent:
+        # Get recent customers (last 10)
+        results = Customer.objects.all().order_by('-last_visit', '-registration_date')[:10]
+    elif q:
+        # Search customers by name, phone, email, or code
+        results = Customer.objects.filter(
+            Q(full_name__icontains=q) |
+            Q(phone__icontains=q) |
+            Q(email__icontains=q) |
+            Q(code__icontains=q)
+        )[:15]
+
     data = [
         {
             "id": c.id,
             "code": c.code,
             "name": c.full_name,
             "phone": c.phone,
-            "type": c.customer_type,
+            "email": c.email or '',
+            "type": c.customer_type or 'personal',
             "last_visit": c.last_visit.isoformat() if c.last_visit else None,
+            "total_visits": c.total_visits,
+            "address": c.address or '',
         }
         for c in results
     ]
@@ -271,7 +296,47 @@ def orders_list(request: HttpRequest):
 
 @login_required
 def order_start(request: HttpRequest):
-    return render(request, "tracker/order_start.html")
+    if request.method == 'POST':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            # Handle AJAX order creation
+            customer_id = request.POST.get('customer_id')
+            if not customer_id:
+                return JsonResponse({'success': False, 'message': 'Customer ID is required'})
+
+            customer = get_object_or_404(Customer, id=customer_id)
+
+            # Create order
+            order_data = {
+                'customer': customer,
+                'type': request.POST.get('type'),
+                'priority': request.POST.get('priority', 'medium'),
+                'status': 'created',
+                'description': request.POST.get('description', ''),
+                'estimated_duration': request.POST.get('estimated_duration') or None,
+                'item_name': request.POST.get('item_name', ''),
+                'brand': request.POST.get('brand', ''),
+                'quantity': request.POST.get('quantity') or None,
+                'inquiry_type': request.POST.get('inquiry_type', ''),
+                'questions': request.POST.get('questions', ''),
+                'contact_preference': request.POST.get('contact_preference', ''),
+                'follow_up_date': request.POST.get('follow_up_date') or None,
+            }
+
+            # Handle vehicle
+            vehicle_id = request.POST.get('vehicle')
+            if vehicle_id:
+                vehicle = get_object_or_404(Vehicle, id=vehicle_id, customer=customer)
+                order_data['vehicle'] = vehicle
+
+            order = Order.objects.create(**order_data)
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Order created successfully',
+                'order_id': order.id
+            })
+
+    return render(request, "tracker/order_create.html")
 
 
 @login_required
@@ -560,3 +625,370 @@ def user_edit(request: HttpRequest, pk: int):
     else:
         form = AdminUserForm(instance=u)
     return render(request, 'tracker/user_edit.html', { 'form': form, 'user_obj': u })
+
+
+@login_required
+def customer_edit(request: HttpRequest, pk: int):
+    customer = get_object_or_404(Customer, pk=pk)
+    if request.method == 'POST':
+        form = CustomerEditForm(request.POST, instance=customer)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Customer updated successfully')
+            return redirect('tracker:customer_detail', pk=customer.id)
+        else:
+            messages.error(request, 'Please correct errors and try again')
+    else:
+        form = CustomerEditForm(instance=customer)
+    return render(request, 'tracker/customer_edit.html', { 'form': form, 'customer': customer })
+
+
+@login_required
+def customers_quick_create(request: HttpRequest):
+    """Quick customer creation for order form"""
+    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        try:
+            full_name = request.POST.get('full_name', '').strip()
+            phone = request.POST.get('phone', '').strip()
+            email = request.POST.get('email', '').strip()
+            customer_type = request.POST.get('customer_type', 'personal')
+
+            if not full_name or not phone:
+                return JsonResponse({'success': False, 'message': 'Name and phone are required'})
+
+            # Check if customer with this phone already exists
+            if Customer.objects.filter(phone=phone).exists():
+                return JsonResponse({'success': False, 'message': 'Customer with this phone number already exists'})
+
+            # Create customer
+            customer = Customer.objects.create(
+                full_name=full_name,
+                phone=phone,
+                email=email if email else None,
+                customer_type=customer_type
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Customer created successfully',
+                'customer': {
+                    'id': customer.id,
+                    'name': customer.full_name,
+                    'phone': customer.phone,
+                    'email': customer.email or '',
+                    'code': customer.code,
+                    'type': customer.customer_type
+                }
+            })
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Error creating customer: {str(e)}'})
+
+    return JsonResponse({'success': False, 'message': 'Invalid request'})
+
+
+@login_required
+def inquiries(request: HttpRequest):
+    """View and manage customer inquiries"""
+    # Get filter parameters
+    inquiry_type = request.GET.get('type', '')
+    status = request.GET.get('status', '')
+    follow_up = request.GET.get('follow_up', '')
+
+    # Base queryset for consultation orders (inquiries)
+    queryset = Order.objects.filter(type='consultation').select_related('customer').order_by('-created_at')
+
+    # Apply filters
+    if inquiry_type:
+        queryset = queryset.filter(inquiry_type=inquiry_type)
+
+    if status:
+        queryset = queryset.filter(status=status)
+
+    if follow_up == 'required':
+        queryset = queryset.filter(follow_up_date__isnull=False)
+    elif follow_up == 'overdue':
+        today = timezone.localdate()
+        queryset = queryset.filter(
+            follow_up_date__lte=today,
+            status__in=['created', 'in_progress']
+        )
+
+    # Pagination
+    paginator = Paginator(queryset, 12)  # Show 12 inquiries per page
+    page = request.GET.get('page')
+    inquiries = paginator.get_page(page)
+
+    # Statistics
+    stats = {
+        'new': Order.objects.filter(type='consultation', status='created').count(),
+        'in_progress': Order.objects.filter(type='consultation', status='in_progress').count(),
+        'resolved': Order.objects.filter(type='consultation', status='completed').count(),
+    }
+
+    context = {
+        'inquiries': inquiries,
+        'stats': stats,
+        'today': timezone.localdate(),
+    }
+
+    return render(request, 'tracker/inquiries.html', context)
+
+
+@login_required
+def inquiry_detail(request: HttpRequest, pk: int):
+    """Get inquiry details for modal view"""
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        try:
+            inquiry = get_object_or_404(Order, pk=pk, type='consultation')
+
+            data = {
+                'id': inquiry.id,
+                'customer': {
+                    'name': inquiry.customer.full_name,
+                    'phone': inquiry.customer.phone,
+                    'email': inquiry.customer.email or '',
+                },
+                'inquiry_type': inquiry.inquiry_type or 'General',
+                'contact_preference': inquiry.contact_preference or 'Phone',
+                'questions': inquiry.questions or '',
+                'status': inquiry.status,
+                'status_display': inquiry.get_status_display(),
+                'created_at': inquiry.created_at.isoformat(),
+                'follow_up_date': inquiry.follow_up_date.isoformat() if inquiry.follow_up_date else None,
+                'responses': [],  # In a real app, you'd have a related model for responses
+            }
+
+            return JsonResponse(data)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+@login_required
+def inquiry_respond(request: HttpRequest, pk: int):
+    """Respond to a customer inquiry"""
+    inquiry = get_object_or_404(Order, pk=pk, type='consultation')
+
+    if request.method == 'POST':
+        response_text = request.POST.get('response', '').strip()
+        follow_up_required = request.POST.get('follow_up_required') == 'on'
+        follow_up_date = request.POST.get('follow_up_date')
+
+        if not response_text:
+            messages.error(request, 'Response message is required')
+            return redirect('tracker:inquiries')
+
+        # In a real application, you'd save the response to a related model
+        # For now, we'll update the inquiry status and add the response to notes
+
+        if inquiry.notes:
+            inquiry.notes += f"\n\n[{timezone.now().strftime('%Y-%m-%d %H:%M')}] Response: {response_text}"
+        else:
+            inquiry.notes = f"[{timezone.now().strftime('%Y-%m-%d %H:%M')}] Response: {response_text}"
+
+        # Update follow-up date if required
+        if follow_up_required and follow_up_date:
+            try:
+                inquiry.follow_up_date = follow_up_date
+            except ValueError:
+                pass
+
+        # Mark as in progress if not already completed
+        if inquiry.status == 'created':
+            inquiry.status = 'in_progress'
+
+        inquiry.save()
+
+        messages.success(request, 'Response sent successfully')
+        return redirect('tracker:inquiries')
+
+    return redirect('tracker:inquiries')
+
+
+@login_required
+def update_inquiry_status(request: HttpRequest, pk: int):
+    """Update inquiry status"""
+    inquiry = get_object_or_404(Order, pk=pk, type='consultation')
+
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+
+        if new_status in ['created', 'in_progress', 'completed']:
+            old_status = inquiry.status
+            inquiry.status = new_status
+
+            if new_status == 'completed':
+                inquiry.completed_at = timezone.now()
+
+            inquiry.save()
+
+            status_display = {
+                'created': 'New',
+                'in_progress': 'In Progress',
+                'completed': 'Resolved'
+            }
+
+            messages.success(request, f'Inquiry status updated to {status_display.get(new_status, new_status)}')
+        else:
+            messages.error(request, 'Invalid status')
+
+    return redirect('tracker:inquiries')
+
+
+@login_required
+def reports_advanced(request: HttpRequest):
+    """Advanced reports with period and type filters"""
+    from datetime import timedelta
+
+    period = request.GET.get('period', 'monthly')
+    report_type = request.GET.get('type', 'overview')
+
+    # Calculate date range based on period
+    today = timezone.localdate()
+    if period == 'daily':
+        start_date = today
+        end_date = today
+        date_format = '%H:%M'
+        labels = [f"{i:02d}:00" for i in range(24)]
+    elif period == 'weekly':
+        start_date = today - timedelta(days=6)
+        end_date = today
+        date_format = '%a'
+        labels = [(start_date + timedelta(days=i)).strftime('%a') for i in range(7)]
+    elif period == 'yearly':
+        start_date = today.replace(month=1, day=1)
+        end_date = today
+        date_format = '%b'
+        labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    else:  # monthly
+        start_date = today - timedelta(days=29)
+        end_date = today
+        date_format = '%d'
+        labels = [(start_date + timedelta(days=i)).strftime('%d') for i in range(30)]
+
+    # Base statistics
+    total_orders = Order.objects.filter(created_at__date__range=[start_date, end_date]).count()
+    completed_orders = Order.objects.filter(
+        created_at__date__range=[start_date, end_date],
+        status='completed'
+    ).count()
+    pending_orders = Order.objects.filter(
+        created_at__date__range=[start_date, end_date],
+        status__in=['created', 'assigned', 'in_progress']
+    ).count()
+    total_customers = Customer.objects.filter(registration_date__date__range=[start_date, end_date]).count()
+
+    completion_rate = int((completed_orders * 100) / total_orders) if total_orders > 0 else 0
+
+    # Average duration
+    avg_duration_qs = Order.objects.filter(
+        created_at__date__range=[start_date, end_date],
+        actual_duration__isnull=False
+    ).aggregate(avg_duration=Avg('actual_duration'))
+    avg_duration = int(avg_duration_qs['avg_duration'] or 0)
+
+    stats = {
+        'total_orders': total_orders,
+        'completed_orders': completed_orders,
+        'pending_orders': pending_orders,
+        'total_customers': total_customers,
+        'completion_rate': completion_rate,
+        'avg_duration': avg_duration,
+        'new_customers': total_customers,
+        'avg_service_time': avg_duration,
+        # Order type breakdown
+        'service_orders': Order.objects.filter(
+            created_at__date__range=[start_date, end_date], type='service'
+        ).count(),
+        'sales_orders': Order.objects.filter(
+            created_at__date__range=[start_date, end_date], type='sales'
+        ).count(),
+        'consultation_orders': Order.objects.filter(
+            created_at__date__range=[start_date, end_date], type='consultation'
+        ).count(),
+    }
+
+    # Calculate percentages
+    if total_orders > 0:
+        stats['service_percentage'] = int((stats['service_orders'] * 100) / total_orders)
+        stats['sales_percentage'] = int((stats['sales_orders'] * 100) / total_orders)
+        stats['consultation_percentage'] = int((stats['consultation_orders'] * 100) / total_orders)
+    else:
+        stats['service_percentage'] = stats['sales_percentage'] = stats['consultation_percentage'] = 0
+
+    # Generate sample chart data
+    import random
+    chart_data = {
+        'trend': {
+            'labels': labels,
+            'values': [random.randint(5, 25) for _ in labels]
+        },
+        'status': {
+            'labels': ['Created', 'Assigned', 'In Progress', 'Completed', 'Cancelled'],
+            'values': [
+                Order.objects.filter(created_at__date__range=[start_date, end_date], status='created').count(),
+                Order.objects.filter(created_at__date__range=[start_date, end_date], status='assigned').count(),
+                Order.objects.filter(created_at__date__range=[start_date, end_date], status='in_progress').count(),
+                Order.objects.filter(created_at__date__range=[start_date, end_date], status='completed').count(),
+                Order.objects.filter(created_at__date__range=[start_date, end_date], status='cancelled').count(),
+            ]
+        },
+        'orders': {
+            'labels': ['Service', 'Sales', 'Consultation'],
+            'values': [stats['service_orders'], stats['sales_orders'], stats['consultation_orders']]
+        },
+        'growth': {
+            'labels': labels,
+            'values': [random.randint(2, 10) for _ in labels]
+        },
+        'types': {
+            'labels': ['Personal', 'Company', 'Government', 'NGO', 'Bodaboda'],
+            'values': [
+                Customer.objects.filter(registration_date__date__range=[start_date, end_date], customer_type='personal').count(),
+                Customer.objects.filter(registration_date__date__range=[start_date, end_date], customer_type='company').count(),
+                Customer.objects.filter(registration_date__date__range=[start_date, end_date], customer_type='government').count(),
+                Customer.objects.filter(registration_date__date__range=[start_date, end_date], customer_type='ngo').count(),
+                Customer.objects.filter(registration_date__date__range=[start_date, end_date], customer_type='bodaboda').count(),
+            ]
+        },
+        'inquiries': {
+            'labels': labels,
+            'values': [random.randint(1, 8) for _ in labels]
+        },
+        'response': {
+            'labels': labels,
+            'values': [random.uniform(0.5, 4.0) for _ in labels]
+        },
+        'revenue': {
+            'labels': labels,
+            'values': [random.randint(500, 2000) for _ in labels]
+        }
+    }
+
+    # Get data items based on report type
+    if report_type == 'customers':
+        data_items = Customer.objects.filter(
+            registration_date__date__range=[start_date, end_date]
+        ).order_by('-registration_date')[:20]
+    elif report_type == 'inquiries':
+        data_items = Order.objects.filter(
+            created_at__date__range=[start_date, end_date],
+            type='consultation'
+        ).select_related('customer').order_by('-created_at')[:20]
+    else:
+        data_items = Order.objects.filter(
+            created_at__date__range=[start_date, end_date]
+        ).select_related('customer').order_by('-created_at')[:20]
+
+    context = {
+        'period': period,
+        'report_type': report_type,
+        'stats': stats,
+        'chart_data': json.dumps(chart_data),
+        'data_items': data_items,
+    }
+
+    return render(request, 'tracker/reports_advanced.html', context)

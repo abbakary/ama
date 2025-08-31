@@ -9,6 +9,19 @@ class CustomerEditForm(forms.ModelForm):
             "full_name","phone","email","address","notes",
             "customer_type","organization_name","tax_number","personal_subtype","current_status",
         ]
+        widgets = {
+            'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter full name'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+256 XXX XXX XXX'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@example.com'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Enter address'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Additional notes'}),
+            'customer_type': forms.Select(attrs={'class': 'form-select'}),
+            'organization_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Organization name'}),
+            'tax_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Tax number/TIN'}),
+            'personal_subtype': forms.Select(attrs={'class': 'form-select'}),
+            'current_status': forms.Select(attrs={'class': 'form-select'}),
+        }
+
     def clean(self):
         cleaned = super().clean()
         t = cleaned.get("customer_type")
@@ -17,31 +30,215 @@ class CustomerEditForm(forms.ModelForm):
                 self.add_error("organization_name","Required for organizational customers")
             if not cleaned.get("tax_number"):
                 self.add_error("tax_number","Required for organizational customers")
+        elif t == "personal":
+            if not cleaned.get("personal_subtype"):
+                self.add_error("personal_subtype","Please specify if you are the owner or driver")
         return cleaned
 
+class CustomerBasicForm(forms.Form):
+    """Step 1: Basic customer information - used for quick customer creation"""
+    full_name = forms.CharField(
+        max_length=255,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter customer full name',
+            'required': True
+        })
+    )
+    phone = forms.CharField(
+        max_length=20,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '+256 XXX XXX XXX',
+            'required': True
+        })
+    )
+    email = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'email@example.com (optional)'
+        })
+    )
+    address = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Enter customer address (optional)'
+        })
+    )
+    notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 2,
+            'placeholder': 'Additional notes (optional)'
+        })
+    )
+
 class CustomerStep1Form(forms.Form):
-    full_name = forms.CharField(max_length=255)
-    phone = forms.CharField(max_length=20)
-    email = forms.EmailField(required=False)
-    address = forms.CharField(widget=forms.Textarea, required=False)
-    notes = forms.CharField(widget=forms.Textarea, required=False)
+    """Step 1: Basic customer information"""
+    full_name = forms.CharField(
+        max_length=255,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter full name',
+            'required': True
+        })
+    )
+    phone = forms.CharField(
+        max_length=20,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '+256 XXX XXX XXX',
+            'required': True
+        })
+    )
+    email = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'email@example.com'
+        })
+    )
+    address = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Enter address'
+        })
+    )
+    notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 2,
+            'placeholder': 'Additional notes'
+        })
+    )
 
 class CustomerStep2Form(forms.Form):
-    intent = forms.ChoiceField(choices=[("service", "I need a service"), ("inquiry", "Just an inquiry")])
+    """Step 2: Service intent"""
+    INTENT_CHOICES = [
+        ("service", "I need a service"),
+        ("sales", "I want to buy something"),
+        ("inquiry", "Just an inquiry")
+    ]
+    
+    intent = forms.ChoiceField(
+        choices=INTENT_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'})
+    )
 
 class CustomerStep3Form(forms.Form):
-    service_type = forms.ChoiceField(choices=[("tire", "Tire Sales"), ("car_service", "Car Service")])
+    """Step 3: Service/Sales type"""
+    SERVICE_TYPE_CHOICES = [
+        ("oil_change", "Oil Change"),
+        ("engine_diagnostics", "Engine Diagnostics"),
+        ("brake_repair", "Brake Repair"),
+        ("tire_rotation", "Tire Rotation"),
+        ("wheel_alignment", "Wheel Alignment"),
+        ("battery_check", "Battery Check"),
+        ("fluid_top_up", "Fluid Top-Up"),
+        ("general_maintenance", "General Maintenance"),
+        ("other", "Other Service")
+    ]
+    
+    SALES_TYPE_CHOICES = [
+        ("tire_sales", "Tire Sales"),
+        ("parts_sales", "Auto Parts"),
+        ("oil_sales", "Oil & Fluids"),
+        ("battery_sales", "Battery"),
+        ("accessories", "Accessories"),
+        ("other", "Other Products")
+    ]
+    
+    service_type = forms.ChoiceField(
+        choices=SERVICE_TYPE_CHOICES,
+        required=False,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'})
+    )
+    
+    sales_type = forms.ChoiceField(
+        choices=SALES_TYPE_CHOICES,
+        required=False,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'})
+    )
 
 class CustomerStep4Form(forms.Form):
-    customer_type = forms.ChoiceField(choices=Customer.TYPE_CHOICES)
-    organization_name = forms.CharField(required=False)
-    tax_number = forms.CharField(required=False)
-    personal_subtype = forms.ChoiceField(choices=Customer.PERSONAL_SUBTYPE, required=False)
+    """Step 4: Customer type and organizational details"""
+    customer_type = forms.ChoiceField(
+        choices=Customer.TYPE_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select', 'required': True})
+    )
+    organization_name = forms.CharField(
+        required=False,
+        max_length=255,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Organization/Company name'
+        })
+    )
+    tax_number = forms.CharField(
+        required=False,
+        max_length=64,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Tax number/TIN'
+        })
+    )
+    personal_subtype = forms.ChoiceField(
+        choices=[('', 'Select...')] + Customer.PERSONAL_SUBTYPE,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        customer_type = cleaned.get('customer_type')
+        
+        if customer_type in ['government', 'ngo', 'company']:
+            if not cleaned.get('organization_name'):
+                self.add_error('organization_name', 'Organization name is required for this customer type')
+            if not cleaned.get('tax_number'):
+                self.add_error('tax_number', 'Tax number is required for this customer type')
+        elif customer_type == 'personal':
+            if not cleaned.get('personal_subtype'):
+                self.add_error('personal_subtype', 'Please specify if you are the owner or driver')
+        
+        return cleaned
 
 class VehicleForm(forms.ModelForm):
     class Meta:
         model = Vehicle
         fields = ["plate_number", "make", "model", "vehicle_type"]
+        widgets = {
+            'plate_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g., UAH 123A',
+                'style': 'text-transform: uppercase;'
+            }),
+            'make': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g., Toyota, Honda'
+            }),
+            'model': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g., Camry, Civic'
+            }),
+            'vehicle_type': forms.Select(attrs={'class': 'form-select'}, choices=[
+                ('', 'Select vehicle type'),
+                ('sedan', 'Sedan'),
+                ('suv', 'SUV'),
+                ('truck', 'Truck'),
+                ('van', 'Van'),
+                ('motorcycle', 'Motorcycle'),
+                ('bus', 'Bus'),
+                ('other', 'Other')
+            ])
+        }
 
 class OrderForm(forms.ModelForm):
     SERVICE_OPTIONS = [
@@ -52,10 +249,13 @@ class OrderForm(forms.ModelForm):
         ("wheel_alignment", "Wheel Alignment"),
         ("battery_check", "Battery Check"),
         ("fluid_top_up", "Fluid Top-Up"),
+        ("general_maintenance", "General Maintenance"),
     ]
 
     service_selection = forms.MultipleChoiceField(
-        choices=SERVICE_OPTIONS, required=False, widget=forms.CheckboxSelectMultiple
+        choices=SERVICE_OPTIONS, 
+        required=False, 
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'})
     )
 
     class Meta:
@@ -76,40 +276,93 @@ class OrderForm(forms.ModelForm):
             "follow_up_date",
         ]
         widgets = {
-            "follow_up_date": forms.DateInput(attrs={"type": "date"}),
+            "type": forms.Select(attrs={'class': 'form-select'}),
+            "vehicle": forms.Select(attrs={'class': 'form-select'}),
+            "priority": forms.Select(attrs={'class': 'form-select'}),
+            "description": forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            "estimated_duration": forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            "item_name": forms.Select(attrs={'class': 'form-select'}),
+            "brand": forms.Select(attrs={'class': 'form-select'}),
+            "quantity": forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            "tire_type": forms.Select(attrs={'class': 'form-select'}),
+            "inquiry_type": forms.Select(attrs={'class': 'form-select'}),
+            "questions": forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            "contact_preference": forms.Select(attrs={'class': 'form-select'}),
+            "follow_up_date": forms.DateInput(attrs={"type": "date", 'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["item_name"].widget = forms.Select(choices=[
-            ("All-Season", "All-Season"),
-            ("Summer", "Summer"),
-            ("Winter", "Winter"),
-            ("Performance", "Performance"),
-            ("Off-Road", "Off-Road"),
-            ("Eco", "Eco"),
-            ("Run-Flat", "Run-Flat"),
-        ])
-        self.fields["brand"].widget = forms.Select(choices=[
-            ("Michelin", "Michelin"),
-            ("Bridgestone", "Bridgestone"),
-            ("Continental", "Continental"),
-            ("Pirelli", "Pirelli"),
-            ("Goodyear", "Goodyear"),
-        ])
-        self.fields["tire_type"].widget = forms.Select(choices=[
-            ("New", "New"), ("Used", "Used"), ("Refurbished", "Refurbished")
-        ])
-        self.fields["inquiry_type"].widget = forms.Select(choices=[
-            ("Pricing", "Pricing"), ("Services", "Services"), ("Appointment Booking", "Appointment Booking"), ("General", "General")
-        ])
-        self.fields["contact_preference"].widget = forms.Select(choices=[
-            ("phone", "Phone"), ("email", "Email")
-        ])
+        
+        # Tire item choices
+        self.fields["item_name"].widget = forms.Select(
+            attrs={'class': 'form-select'},
+            choices=[
+                ('', 'Select tire type'),
+                ("All-Season", "All-Season"),
+                ("Summer", "Summer"),
+                ("Winter", "Winter"),
+                ("Performance", "Performance"),
+                ("Off-Road", "Off-Road"),
+                ("Eco", "Eco"),
+                ("Run-Flat", "Run-Flat"),
+            ]
+        )
+        
+        # Brand choices
+        self.fields["brand"].widget = forms.Select(
+            attrs={'class': 'form-select'},
+            choices=[
+                ('', 'Select brand'),
+                ("Michelin", "Michelin"),
+                ("Bridgestone", "Bridgestone"),
+                ("Continental", "Continental"),
+                ("Pirelli", "Pirelli"),
+                ("Goodyear", "Goodyear"),
+                ("Dunlop", "Dunlop"),
+                ("Yokohama", "Yokohama"),
+                ("Hankook", "Hankook"),
+            ]
+        )
+        
+        # Tire type choices
+        self.fields["tire_type"].widget = forms.Select(
+            attrs={'class': 'form-select'},
+            choices=[
+                ('', 'Select condition'),
+                ("New", "New"),
+                ("Used", "Used"),
+                ("Refurbished", "Refurbished")
+            ]
+        )
+        
+        # Inquiry type choices
+        self.fields["inquiry_type"].widget = forms.Select(
+            attrs={'class': 'form-select'},
+            choices=[
+                ('', 'Select inquiry type'),
+                ("Pricing", "Pricing"),
+                ("Services", "Services"),
+                ("Appointment Booking", "Appointment Booking"),
+                ("General", "General")
+            ]
+        )
+        
+        # Contact preference choices
+        self.fields["contact_preference"].widget = forms.Select(
+            attrs={'class': 'form-select'},
+            choices=[
+                ('', 'Select preference'),
+                ("phone", "Phone"),
+                ("email", "Email"),
+                ("whatsapp", "WhatsApp")
+            ]
+        )
 
     def clean(self):
         cleaned = super().clean()
         t = cleaned.get("type")
+        
         if t == "sales":
             for f in ["item_name", "brand"]:
                 if not cleaned.get(f):
@@ -117,6 +370,7 @@ class OrderForm(forms.ModelForm):
             q = cleaned.get("quantity")
             if not q or q < 1:
                 self.add_error("quantity", "Quantity must be at least 1")
+                
         elif t == "service":
             if not cleaned.get("description"):
                 self.add_error("description", "Problem description required for Service orders")
@@ -127,37 +381,90 @@ class OrderForm(forms.ModelForm):
                 desc = cleaned.get("description") or ""
                 desc_services = "\nSelected services: " + ", ".join(dict(self.SERVICE_OPTIONS)[s] for s in services)
                 cleaned["description"] = (desc + desc_services).strip()
+                
         elif t == "consultation":
             if not cleaned.get("inquiry_type"):
                 self.add_error("inquiry_type", "Inquiry type is required")
             if not cleaned.get("questions"):
                 self.add_error("questions", "Please provide your questions")
+                
         return cleaned
+
+class CustomerSearchForm(forms.Form):
+    """Form for searching existing customers"""
+    search_query = forms.CharField(
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Search by name, phone, email, or customer code...',
+            'id': 'customer-search'
+        })
+    )
+
+class InquiryResponseForm(forms.Form):
+    """Form for responding to customer inquiries"""
+    response = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 4,
+            'placeholder': 'Enter your response to the customer...'
+        })
+    )
+    
+    follow_up_required = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+    
+    follow_up_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
 
 class InventoryItemForm(forms.ModelForm):
     class Meta:
         model = InventoryItem
         fields = ["name", "brand", "quantity", "price"]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'brand': forms.TextInput(attrs={'class': 'form-control'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': 0}),
+        }
 
 class AdminUserForm(forms.ModelForm):
-    group_manager = forms.BooleanField(required=False, label="Manager role")
+    group_manager = forms.BooleanField(
+        required=False, 
+        label="Manager role",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
 
     class Meta:
         model = User
         fields = ["first_name", "last_name", "email", "is_active", "is_staff"]
+        widgets = {
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        mgr, _ = Group.objects.get_or_create(name="manager")
-        self.fields["group_manager"].initial = mgr in self.instance.groups.all()
+        if self.instance.pk:
+            mgr, _ = Group.objects.get_or_create(name="manager")
+            self.fields["group_manager"].initial = mgr in self.instance.groups.all()
 
     def save(self, commit=True):
         user = super().save(commit)
-        mgr, _ = Group.objects.get_or_create(name="manager")
-        if self.cleaned_data.get("group_manager"):
-            user.groups.add(mgr)
-        else:
-            user.groups.remove(mgr)
-        if commit:
-            user.save()
+        if user.pk:
+            mgr, _ = Group.objects.get_or_create(name="manager")
+            if self.cleaned_data.get("group_manager"):
+                user.groups.add(mgr)
+            else:
+                user.groups.remove(mgr)
+            if commit:
+                user.save()
         return user
