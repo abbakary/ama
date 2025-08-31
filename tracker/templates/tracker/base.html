@@ -73,10 +73,14 @@
                 </li>
 
                 <li class="sidebar-list">
-                    <a href="{% url 'tracker:reports' %}" class="sidebar-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+                    <a href="#" class="sidebar-link has-arrow">
                         <i class="fas fa-file-alt"></i>
                         <span>Reports</span>
                     </a>
+                    <ul class="sidebar-submenu">
+                        <li><a href="{% url 'tracker:reports' %}">Basic Reports</a></li>
+                        <li><a href="{% url 'tracker:reports_advanced' %}">Advanced Analytics</a></li>
+                    </ul>
                 </li>
 
                 {% if request.user.is_authenticated %}
