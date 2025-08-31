@@ -130,17 +130,41 @@ def customers_list(request: HttpRequest):
 @login_required
 def customers_search(request: HttpRequest):
     q = request.GET.get("q", "").strip()
+    customer_id = request.GET.get("id")
+    recent = request.GET.get("recent")
+
     results = []
-    if q:
-        results = Customer.objects.filter(full_name__icontains=q)[:10]
+
+    if customer_id:
+        # Get specific customer by ID
+        try:
+            customer = Customer.objects.get(id=customer_id)
+            results = [customer]
+        except Customer.DoesNotExist:
+            pass
+    elif recent:
+        # Get recent customers (last 10)
+        results = Customer.objects.all().order_by('-last_visit', '-registration_date')[:10]
+    elif q:
+        # Search customers by name, phone, email, or code
+        results = Customer.objects.filter(
+            models.Q(full_name__icontains=q) |
+            models.Q(phone__icontains=q) |
+            models.Q(email__icontains=q) |
+            models.Q(code__icontains=q)
+        )[:15]
+
     data = [
         {
             "id": c.id,
             "code": c.code,
             "name": c.full_name,
             "phone": c.phone,
-            "type": c.customer_type,
+            "email": c.email or '',
+            "type": c.customer_type or 'personal',
             "last_visit": c.last_visit.isoformat() if c.last_visit else None,
+            "total_visits": c.total_visits,
+            "address": c.address or '',
         }
         for c in results
     ]
