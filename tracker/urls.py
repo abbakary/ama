@@ -23,6 +23,7 @@ urlpatterns = [
 
     path("analytics/", views.analytics, name="analytics"),
     path("reports/", views.reports, name="reports"),
+    path("reports/advanced/", views.reports_advanced, name="reports_advanced"),
     path("reports/export/", views.reports_export, name="reports_export"),
 
     # Inquiry management
