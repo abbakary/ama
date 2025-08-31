@@ -41,7 +41,11 @@ class Customer(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.code:
-            self.code = f"CUST{int(timezone.now().timestamp())}"
+            import uuid
+            self.code = f"CUST{str(uuid.uuid4())[:8].upper()}"
+            # Ensure uniqueness
+            while Customer.objects.filter(code=self.code).exists():
+                self.code = f"CUST{str(uuid.uuid4())[:8].upper()}"
         if not self.arrival_time:
             self.arrival_time = timezone.now()
         super().save(*args, **kwargs)
