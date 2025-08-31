@@ -272,7 +272,47 @@ def orders_list(request: HttpRequest):
 
 @login_required
 def order_start(request: HttpRequest):
-    return render(request, "tracker/order_start.html")
+    if request.method == 'POST':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            # Handle AJAX order creation
+            customer_id = request.POST.get('customer_id')
+            if not customer_id:
+                return JsonResponse({'success': False, 'message': 'Customer ID is required'})
+
+            customer = get_object_or_404(Customer, id=customer_id)
+
+            # Create order
+            order_data = {
+                'customer': customer,
+                'type': request.POST.get('type'),
+                'priority': request.POST.get('priority', 'medium'),
+                'status': 'created',
+                'description': request.POST.get('description', ''),
+                'estimated_duration': request.POST.get('estimated_duration') or None,
+                'item_name': request.POST.get('item_name', ''),
+                'brand': request.POST.get('brand', ''),
+                'quantity': request.POST.get('quantity') or None,
+                'inquiry_type': request.POST.get('inquiry_type', ''),
+                'questions': request.POST.get('questions', ''),
+                'contact_preference': request.POST.get('contact_preference', ''),
+                'follow_up_date': request.POST.get('follow_up_date') or None,
+            }
+
+            # Handle vehicle
+            vehicle_id = request.POST.get('vehicle')
+            if vehicle_id:
+                vehicle = get_object_or_404(Vehicle, id=vehicle_id, customer=customer)
+                order_data['vehicle'] = vehicle
+
+            order = Order.objects.create(**order_data)
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Order created successfully',
+                'order_id': order.id
+            })
+
+    return render(request, "tracker/order_create.html")
 
 
 @login_required
