@@ -1,0 +1,66 @@
+{% extends 'tracker/base.html' %} {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="display-6 m-0">Create Order</h2>
+  <a class="btn btn-primary" href="{% url 'tracker:customer_register' %}"
+    ><i class="bi bi-person-plus"></i> New Customer & Order</a
+  >
+</div>
+<div class="m-card m-elev-2">
+  <div class="m-card-body">
+    <div class="mb-2">Search existing customer</div>
+    <div class="input-group">
+      <span class="input-group-text bg-transparent border-end-0"
+        ><i class="bi bi-search"></i
+      ></span>
+      <input
+        id="order-start-search"
+        class="form-control border-start-0"
+        placeholder="Type name, phone or code"
+      />
+    </div>
+    <div id="order-start-results" class="mt-3"></div>
+  </div>
+</div>
+<script>
+  (function () {
+    const input = document.getElementById("order-start-search");
+    const out = document.getElementById("order-start-results");
+    let t;
+    const render = (items) => {
+      if (!items.length) {
+        out.innerHTML = '<div class="text-muted">No results</div>';
+        return;
+      }
+      out.innerHTML = items
+        .map(
+          (c) =>
+            `<div class="d-flex justify-content-between align-items-center border rounded p-2 mb-2">
+          <div>
+            <div class="fw-semibold">${c.name}</div>
+            <div class="text-muted small">${c.code} · ${c.phone}</div>
+          </div>
+          <div class="d-flex gap-2">
+            <a class="btn btn-sm btn-outline-secondary" href="/customers/${c.id}/">View</a>
+            <a class="btn btn-sm btn-primary" href="/customers/${c.id}/order/new/">Create Order</a>
+          </div>
+        </div>`,
+        )
+        .join("");
+    };
+    const search = async (q) => {
+      const res = await fetch(`/customers/search/?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      render(data.results || []);
+    };
+    input.addEventListener("input", () => {
+      clearTimeout(t);
+      const q = input.value.trim();
+      if (!q) {
+        out.innerHTML = "";
+        return;
+      }
+      t = setTimeout(() => search(q), 200);
+    });
+  })();
+</script>
+{% endblock %}

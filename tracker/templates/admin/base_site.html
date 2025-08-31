@@ -1,0 +1,6 @@
+{% extends "admin/base.html" %} {% load static %} {% block title %}POS-Tracker
+Admin{% endblock %} {% block branding %}
+<h1 id="site-name"><a href="/admin/">⚡ POS-Tracker Admin</a></h1>
+{% endblock %} {% block extrastyle %} {{ block.super }}
+<link rel="stylesheet" href="{% static 'tracker/css/admin.css' %}" />
+{% endblock %}

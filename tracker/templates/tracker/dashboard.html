@@ -1,0 +1,231 @@
+{% extends 'tracker/base.html' %} {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="display-6 m-0">Dashboard</h2>
+  <div class="text-muted">Realtime overview</div>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card kpi shadow-sm hover-up">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="kpi-label">Total Customers</div>
+            <div class="kpi-value">{{ total_customers }}</div>
+          </div>
+          <i class="bi bi-people text-success fs-3"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card kpi shadow-sm hover-up">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="kpi-label">Pending Orders</div>
+            <div class="kpi-value">{{ pending_count }}</div>
+          </div>
+          <i class="bi bi-hourglass-split text-warning fs-3"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card kpi shadow-sm hover-up">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="kpi-label">In Progress</div>
+            <div class="kpi-value">{{ in_progress_count }}</div>
+          </div>
+          <i class="bi bi-tools text-primary fs-3"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card kpi shadow-sm hover-up">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="donut" style="--percent: {{ completed_percent }}"></div>
+        <div>
+          <div class="kpi-label">Completed Today</div>
+          <div class="kpi-value">{{ completed_today_count }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-header"><strong>Service Breakdown</strong></div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-6 col-md-3">
+            <div class="form-section text-center">
+              <div class="kpi-value">
+                {{ type_counts.car_service|default:type_counts.service|default:0
+                }}
+              </div>
+              <div class="kpi-label">Car Service</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="form-section text-center">
+              <div class="kpi-value">{{ type_counts.sales|default:0 }}</div>
+              <div class="kpi-label">Tire Sales</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="form-section text-center">
+              <div class="kpi-value">
+                {{ type_counts.consultation|default:0 }}
+              </div>
+              <div class="kpi-label">Consultation</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="form-section text-center">
+              <div class="kpi-value">{{ completed_today_count }}</div>
+              <div class="kpi-label">Ready to Leave</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-header"><strong>Recent Activity</strong></div>
+      <div class="card-body">
+        <div id="recent-orders" class="table-responsive small"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-header"><strong>Status Distribution</strong></div>
+      <div class="card-body">
+        <canvas id="statusChart" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-header"><strong>Order Types</strong></div>
+      <div class="card-body"><canvas id="typeChart" height="220"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-header"><strong>Priorities</strong></div>
+      <div class="card-body">
+        <canvas id="priorityChart" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header"><strong>Last 14 Days</strong></div>
+  <div class="card-body"><canvas id="trendChart" height="90"></canvas></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const charts = JSON.parse("{{ charts_json|escapejs }}");
+  function makeDonut(el, labels, data, colors) {
+    new Chart(el, {
+      type: "doughnut",
+      data: {
+        labels,
+        datasets: [{ data, backgroundColor: colors, borderWidth: 0 }],
+      },
+      options: { plugins: { legend: { position: "bottom" } }, cutout: "65%" },
+    });
+  }
+  function makeBar(el, labels, data, color) {
+    new Chart(el, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            data,
+            backgroundColor: color,
+            borderRadius: 6,
+            maxBarThickness: 30,
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: "#e5e7eb" } },
+          x: { grid: { display: false } },
+        },
+      },
+    });
+  }
+  function makeLine(el, labels, data, color) {
+    new Chart(el, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            data,
+            borderColor: color,
+            backgroundColor: color + "33",
+            tension: 0.35,
+            fill: true,
+            pointRadius: 2,
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: "#e5e7eb" } },
+          x: { grid: { display: false } },
+        },
+      },
+    });
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    makeDonut(
+      document.getElementById("statusChart"),
+      charts.status.labels,
+      charts.status.values,
+      ["#e5e7eb", "#bfdbfe", "#fde68a", "#86efac", "#fecaca"],
+    );
+    makeBar(
+      document.getElementById("typeChart"),
+      charts.type.labels,
+      charts.type.values,
+      "#93c5fd",
+    );
+    makeBar(
+      document.getElementById("priorityChart"),
+      charts.priority.labels,
+      charts.priority.values,
+      "#fca5a5",
+    );
+    makeLine(
+      document.getElementById("trendChart"),
+      charts.trend.labels,
+      charts.trend.values,
+      "#34d399",
+    );
+  });
+
+  window.addEventListener("load", () => {
+    refreshRecentOrders();
+    setInterval(refreshRecentOrders, 300000);
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,129 @@
+{% extends 'tracker/base.html' %} {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="display-6 m-0">Analytics</h2>
+  <div class="text-muted">Last 14 days overview</div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-header"><strong>Daily Orders Overview</strong></div>
+      <div class="card-body"><canvas id="anaTrend" height="96"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-header"><strong>Order Status Distribution</strong></div>
+      <div class="card-body"><canvas id="anaStatus" height="210"></canvas></div>
+    </div>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-header"><strong>Service Types Performance</strong></div>
+      <div class="card-body"><canvas id="anaType" height="160"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <strong>Average Service Duration (mins)</strong>
+      </div>
+      <div class="card-body">
+        <canvas id="anaDuration" height="160"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const charts = JSON.parse("{{ charts_json|default:'{}'|escapejs }}");
+  function makeLine(el, labels, data, color) {
+    new Chart(el, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            data,
+            borderColor: color,
+            backgroundColor: color + "33",
+            fill: true,
+            tension: 0.35,
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: "#e5e7eb" } },
+          x: { grid: { display: false } },
+        },
+      },
+    });
+  }
+  function makeDonut(el, labels, data, colors) {
+    new Chart(el, {
+      type: "doughnut",
+      data: {
+        labels,
+        datasets: [{ data, backgroundColor: colors, borderWidth: 0 }],
+      },
+      options: { plugins: { legend: { position: "bottom" } }, cutout: "65%" },
+    });
+  }
+  function makeBar(el, labels, data, color) {
+    new Chart(el, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            data,
+            backgroundColor: color,
+            borderRadius: 6,
+            maxBarThickness: 32,
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: "#e5e7eb" } },
+          x: { grid: { display: false } },
+        },
+      },
+    });
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    if (charts.trend)
+      makeLine(
+        document.getElementById("anaTrend"),
+        charts.trend.labels,
+        charts.trend.values,
+        "#60a5fa",
+      );
+    if (charts.status)
+      makeDonut(
+        document.getElementById("anaStatus"),
+        charts.status.labels,
+        charts.status.values,
+        ["#f3f4f6", "#bfdbfe", "#fde68a", "#86efac", "#fecaca"],
+      );
+    if (charts.type)
+      makeBar(
+        document.getElementById("anaType"),
+        charts.type.labels,
+        charts.type.values,
+        "#93c5fd",
+      );
+    if (charts.avg_duration)
+      makeBar(
+        document.getElementById("anaDuration"),
+        charts.avg_duration.labels,
+        charts.avg_duration.values,
+        "#34d399",
+      );
+  });
+</script>
+{% endblock %}

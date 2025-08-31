@@ -1,0 +1,92 @@
+{% extends 'tracker/base.html' %} {% load form_extras %} {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="display-6 m-0">Edit Customer · {{ customer.full_name }}</h2>
+  <a
+    class="btn btn-outline-secondary"
+    href="{% url 'tracker:customer_detail' customer.id %}"
+    >Back</a
+  >
+</div>
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="form-floating mb-3">
+            {{ form.full_name|add_class:'form-control' }}<label
+              >Full Name</label
+            >
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-floating mb-3">
+            {{ form.phone|add_class:'form-control' }}<label>Phone</label>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-floating mb-3">
+            {{ form.email|add_class:'form-control' }}<label>Email</label>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-floating mb-3">
+            {{ form.customer_type|add_class:'form-select' }}<label
+              >Customer Type</label
+            >
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-floating mb-3">
+            {{ form.organization_name|add_class:'form-control' }}<label
+              >Organization Name</label
+            >
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-floating mb-3">
+            {{ form.tax_number|add_class:'form-control' }}<label
+              >Tax Number</label
+            >
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-floating mb-3">
+            {{ form.personal_subtype|add_class:'form-select' }}<label
+              >Personal Subtype</label
+            >
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-floating mb-3">
+            {{ form.current_status|add_class:'form-select' }}<label
+              >Status</label
+            >
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="form-floating mb-3">
+            {{ form.address|add_class:'form-control' }}<label>Address</label>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="form-floating mb-3">
+            {{ form.notes|add_class:'form-control' }}<label>Notes</label>
+          </div>
+        </div>
+      </div>
+      <div class="mt-2 d-flex gap-2">
+        <button class="btn btn-primary">Save</button>
+        <a
+          class="btn btn-outline-secondary"
+          href="{% url 'tracker:customer_detail' customer.id %}"
+          >Cancel</a
+        >
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+  initOrderFormDynamic && initOrderFormDynamic();
+</script>
+{% endblock %}

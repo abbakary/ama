@@ -1,0 +1,72 @@
+{% extends 'tracker/base.html' %} {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="display-6 m-0">Inventory</h2>
+  <a href="{% url 'tracker:inventory_create' %}" class="btn btn-primary"
+    ><i class="bi bi-plus-circle"></i> New Item</a
+  >
+</div>
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <form class="row g-2" method="get">
+      <div class="col-md-6">
+        <input
+          class="form-control"
+          name="q"
+          placeholder="Search items by name or brand"
+          value="{{ q }}"
+        />
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-outline-secondary">Search</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="card shadow-sm">
+  <div class="card-body table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Brand</th>
+          <th>Qty</th>
+          <th>Price</th>
+          <th>Created</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in items %}
+        <tr>
+          <td>{{ it.name }}</td>
+          <td>{{ it.brand|default:'-' }}</td>
+          <td>
+            <span class="pill pill-{{ it.quantity|yesno:'in_stock,out' }}"
+              >{{ it.quantity }}</span
+            >
+          </td>
+          <td>${{ it.price }}</td>
+          <td>{{ it.created_at|date:'Y-m-d H:i' }}</td>
+          <td class="text-end">
+            <a
+              href="{% url 'tracker:inventory_edit' it.id %}"
+              class="btn btn-sm btn-outline-secondary"
+              ><i class="bi bi-pencil"></i
+            ></a>
+            <a
+              href="{% url 'tracker:inventory_delete' it.id %}"
+              class="btn btn-sm btn-outline-danger"
+              ><i class="bi bi-trash"></i
+            ></a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-muted">No items.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends 'tracker/base.html' %} {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="display-6 m-0">Order {{ order.order_number }}</h2>
+  <div class="d-flex gap-2 align-items-center">
+    <span class="pill pill-{{ order.status }}">{{ order.status|upper }}</span>
+    <span class="pill pill-priority-{{ order.priority }}"
+      >{{ order.priority|upper }}</span
+    >
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="mb-1">
+          Customer:
+          <a href="{% url 'tracker:customer_detail' order.customer.id %}"
+            >{{ order.customer.full_name }}</a
+          >
+        </div>
+        <div class="mb-1">
+          Type: {{ order.type|title }}{% if order.vehicle %} · Vehicle: {{
+          order.vehicle.plate_number }}{% endif %}
+        </div>
+        {% if order.description %}
+        <div class="mt-2">
+          <strong>Description</strong>
+          <div>{{ order.description }}</div>
+        </div>
+        {% endif %} {% if order.item_name %}
+        <div class="mt-2">
+          <strong>Sales</strong> {{ order.quantity }} × {{ order.brand }} {{
+          order.item_name }} ({{ order.tire_type }})
+        </div>
+        {% endif %} {% if order.inquiry_type %}
+        <div class="mt-2">
+          <strong>Inquiry</strong> {{ order.inquiry_type }} · {{ order.questions
+          }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-header"><strong>Update Status</strong></div>
+      <div class="card-body">
+        <form
+          method="post"
+          action="{% url 'tracker:update_order_status' order.id %}"
+        >
+          {% csrf_token %}
+          <select class="form-select" name="status">
+            {% for val,label in order.STATUS_CHOICES %}
+            <option
+              value="{{ val }}"
+              {%
+              if
+              order.status=""
+              ="val"
+              %}selected{%
+              endif
+              %}
+            >
+              {{ label }}
+            </option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-primary mt-2" type="submit">Save</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

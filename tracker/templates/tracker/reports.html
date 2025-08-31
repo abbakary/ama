@@ -1,0 +1,148 @@
+{% extends 'tracker/base.html' %} {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="display-6 m-0">Reports</h2>
+  <form class="d-flex gap-2" method="get">
+    <input
+      class="form-control"
+      type="date"
+      name="from"
+      value="{{ filters.from }}"
+    />
+    <input
+      class="form-control"
+      type="date"
+      name="to"
+      value="{{ filters.to }}"
+    />
+    <select class="form-select" name="type">
+      <option value="all" {% if filters.type="" ="all" %}selected{% endif %}>
+        All Types
+      </option>
+      <option
+        value="service"
+        {%
+        if
+        filters.type=""
+        ="service"
+        %}selected{%
+        endif
+        %}
+      >
+        Service
+      </option>
+      <option
+        value="sales"
+        {%
+        if
+        filters.type=""
+        ="sales"
+        %}selected{%
+        endif
+        %}
+      >
+        Sales
+      </option>
+      <option
+        value="consultation"
+        {%
+        if
+        filters.type=""
+        ="consultation"
+        %}selected{%
+        endif
+        %}
+      >
+        Consultation
+      </option>
+    </select>
+    <button class="btn btn-outline-secondary">Apply</button>
+  </form>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-md-3">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="kpi-label">Total Orders</div>
+        <div class="kpi-value">{{ stats.total }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="kpi-label">Completed</div>
+        <div class="kpi-value">{{ stats.completed }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="kpi-label">In Progress</div>
+        <div class="kpi-value">{{ stats.in_progress }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="kpi-label">Cancelled</div>
+        <div class="kpi-value">{{ stats.cancelled }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card shadow-sm">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <strong>Orders Report</strong>
+    <div class="d-flex gap-2">
+      <a
+        class="btn btn-sm btn-outline-secondary"
+        href="{% url 'tracker:reports_export' %}?{{ request.GET.urlencode }}"
+        >Export CSV</a
+      ><button
+        class="btn btn-sm btn-outline-secondary"
+        onclick="window.print();return false;"
+      >
+        Print
+      </button>
+    </div>
+  </div>
+  <div class="card-body table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th>Customer</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Priority</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orders %}
+        <tr>
+          <td>{{ o.order_number }}</td>
+          <td>{{ o.customer.full_name }}</td>
+          <td>{{ o.type|title }}</td>
+          <td>
+            <span class="pill pill-{{ o.status }}">{{ o.status|upper }}</span>
+          </td>
+          <td>
+            <span class="pill pill-priority-{{ o.priority }}"
+              >{{ o.priority|upper }}</span
+            >
+          </td>
+          <td>{{ o.created_at|date:'Y-m-d H:i' }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-muted">No data for selected filters.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+/***** POS-Tracker Admin Theme *****/
+:root {
+  --blue: #0ea5e9;
+  --bg: #0b1220;
+  --panel: #0f172a;
+  --muted: #9fb0c3;
+}
+#header {
+  background: linear-gradient(
+    90deg,
+    rgba(14, 165, 233, 0.25),
+    rgba(2, 132, 199, 0.25)
+  );
+  color: #0b1220;
+}
+#header a:link,
+#header a:visited {
+  color: #0b1220;
+}
+#branding h1 {
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+#content {
+  background: linear-gradient(180deg, #f8fafc, #f1f5f9);
+}
+.module h2,
+.module caption,
+.inline-group h2 {
+  background: #e0f2fe;
+  color: #0b1220;
+}
+#nav-sidebar {
+  background: #f8fafc;
+}
+.object-tools a {
+  background: #0ea5e9;
+  border-color: #0ea5e9;
+}
+.submit-row input.default {
+  background: #0ea5e9;
+}
+.selector-available h2,
+.selector-chosen h2 {
+  background: #e0f2fe;
+}

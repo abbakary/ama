@@ -1,0 +1,269 @@
+{% extends 'tracker/base.html' %} {% load form_extras %} {% block content %}
+<h2 class="display-6 m-0 mb-2">Customer Registration</h2>
+<div class="stepper">
+  <div class="step {% if step == 1 %}active{% endif %}">
+    <span class="index">1</span> Basic Info
+  </div>
+  <div class="step {% if step == 2 %}active{% endif %}">
+    <span class="index">2</span> Intent
+  </div>
+  <div class="step {% if step == 3 %}active{% endif %}">
+    <span class="index">3</span> Service Type
+  </div>
+  <div class="step {% if step == 4 %}active{% endif %}">
+    <span class="index">4</span> Details & Review
+  </div>
+</div>
+<div class="m-card m-elev-2 hover-up">
+  <div class="m-card-body">
+    <form method="post" id="reg-form" onsubmit="saveDraft()">
+      {% csrf_token %}
+      <input type="hidden" name="step" value="{{ step }}" />
+
+      {% if step == 1 or not step %}
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="form-floating mb-3">
+            {{ form.full_name|add_class:'form-control' }}<label
+              >Full Name</label
+            >
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-floating mb-3">
+            {{ form.phone|add_class:'form-control' }}<label
+              >Phone (+255 xxx xxx xxx)</label
+            >
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-floating mb-3">
+            {{ form.email|add_class:'form-control' }}<label
+              >Email (optional)</label
+            >
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-floating mb-3">
+            {{ form.address|add_class:'form-control' }}<label>Address</label>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="form-floating mb-3">
+            {{ form.notes|add_class:'form-control' }}<label>Notes</label>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-success" name="action" value="save_customer">
+          Save Customer
+        </button>
+        <button class="btn btn-primary" onclick="setNextStep(2)">
+          Proceed to Order
+        </button>
+      </div>
+
+      {% elif step == 2 %}
+      <div class="m-chip mb-3">What brings the customer?</div>
+      <div class="form-floating mb-3">
+        {{ form.intent|add_class:'form-select' }}<label>Intent</label>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary" onclick="setNextStep(1)">
+          Back
+        </button>
+        <button class="btn btn-primary" onclick="setNextStep(3)">Next</button>
+      </div>
+
+      {% elif step == 3 %}
+      <div class="m-chip mb-3">Pick a service category</div>
+      <div class="form-floating mb-3">
+        {{ form.service_type|add_class:'form-select' }}<label
+          >Service Type</label
+        >
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary" onclick="setNextStep(2)">
+          Back
+        </button>
+        <button class="btn btn-primary" onclick="setNextStep(4)">Next</button>
+      </div>
+
+      {% elif step == 4 %}
+      <div class="row g-3">
+        <div class="col-md-5">
+          <div class="m-card m-elev-1">
+            <div class="m-card-header">Customer Classification</div>
+            <div class="m-card-body">
+              <div class="form-floating mb-3">
+                {{ form.customer_type|add_class:'form-select' }}<label
+                  >Customer Type</label
+                >
+              </div>
+              <div id="org-fields">
+                <div class="form-floating mb-3">
+                  {{ form.organization_name|add_class:'form-control' }}<label
+                    >Organization Name</label
+                  >
+                </div>
+                <div class="form-floating mb-3">
+                  {{ form.tax_number|add_class:'form-control' }}<label
+                    >Tax Number</label
+                  >
+                </div>
+              </div>
+              <div id="personal-fields">
+                <div class="m-chip mb-2">Personal customer</div>
+                <div class="form-floating mb-3">
+                  {{ form.personal_subtype|add_class:'form-select' }}<label
+                    >Owner or Driver</label
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="vehicle-section" class="m-card m-elev-1 mt-3">
+            <div class="m-card-header">Vehicle (optional)</div>
+            <div class="m-card-body">
+              <div class="form-floating mb-3">
+                {{ vehicle_form.plate_number|add_class:'form-control' }}<label
+                  >Plate Number</label
+                >
+              </div>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="form-floating mb-3">
+                    {{ vehicle_form.make|add_class:'form-control' }}<label
+                      >Make</label
+                    >
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-floating mb-3">
+                    {{ vehicle_form.model|add_class:'form-control' }}<label
+                      >Model</label
+                    >
+                  </div>
+                </div>
+              </div>
+              <div class="form-floating mb-3">
+                {{ vehicle_form.vehicle_type|add_class:'form-control' }}<label
+                  >Vehicle Type</label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-7">
+          <div class="m-card m-elev-1">
+            <div class="m-card-header">Order Details</div>
+            <div class="m-card-body">
+              <div class="form-floating mb-3">
+                {{ order_form.type|add_class:'form-select' }}<label
+                  >Order Type</label
+                >
+              </div>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="form-floating mb-3">
+                    {{ order_form.priority|add_class:'form-select' }}<label
+                      >Priority</label
+                    >
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-floating mb-3">
+                    {{ order_form.estimated_duration|add_class:'form-control'
+                    }}<label>Estimated Duration (min)</label>
+                  </div>
+                </div>
+              </div>
+              <div id="service-group" class="mb-3">
+                <div class="m-chip mb-2">Select required services</div>
+                <div class="mb-2">{{ order_form.service_selection }}</div>
+                <div class="form-floating">
+                  {{ order_form.description|add_class:'form-control' }}<label
+                    >Problem Description</label
+                  >
+                </div>
+              </div>
+              <div id="sales-group" class="row g-3">
+                <div class="col-md-6">
+                  <div class="form-floating">
+                    {{ order_form.item_name|add_class:'form-select' }}<label
+                      >Item Name</label
+                    >
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-floating">
+                    {{ order_form.brand|add_class:'form-select' }}<label
+                      >Brand</label
+                    >
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-floating mt-3">
+                    {{ order_form.quantity|add_class:'form-control' }}<label
+                      >Quantity</label
+                    >
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-floating mt-3">
+                    {{ order_form.tire_type|add_class:'form-select' }}<label
+                      >Tire Type</label
+                    >
+                  </div>
+                </div>
+              </div>
+              <div id="consultation-group" class="row g-3">
+                <div class="col-md-6">
+                  <div class="form-floating">
+                    {{ order_form.inquiry_type|add_class:'form-select' }}<label
+                      >Inquiry Type</label
+                    >
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-floating">
+                    {{ order_form.contact_preference|add_class:'form-select'
+                    }}<label>Contact Preference</label>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <div class="form-floating mt-3">
+                    {{ order_form.questions|add_class:'form-control' }}<label
+                      >Questions</label
+                    >
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-floating mt-3">
+                    {{ order_form.follow_up_date|add_class:'form-control'
+                    }}<label>Follow-up Date</label>
+                  </div>
+                </div>
+              </div>
+              <small class="text-muted d-block mt-2"
+                >Fields vary by order type.</small
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-outline-secondary" onclick="setNextStep(3)">
+          Back
+        </button>
+        <button class="btn btn-success" type="submit">Submit</button>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+<script>
+  restoreDraft();
+  initOrderFormDynamic && initOrderFormDynamic();
+</script>
+{% endblock %}

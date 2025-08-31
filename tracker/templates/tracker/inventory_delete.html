@@ -1,0 +1,17 @@
+{% extends 'tracker/base.html' %} {% block content %}
+<h2 class="display-6 m-0 mb-3">Delete Item</h2>
+<div class="card shadow-sm">
+  <div class="card-body">
+    <p>Are you sure you want to delete <strong>{{ item.name }}</strong>?</p>
+    <form method="post">
+      {% csrf_token %}
+      <button class="btn btn-danger">Delete</button>
+      <a
+        href="{% url 'tracker:inventory_list' %}"
+        class="btn btn-outline-secondary"
+        >Cancel</a
+      >
+    </form>
+  </div>
+</div>
+{% endblock %}
