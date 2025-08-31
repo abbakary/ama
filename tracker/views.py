@@ -148,10 +148,10 @@ def customers_search(request: HttpRequest):
     elif q:
         # Search customers by name, phone, email, or code
         results = Customer.objects.filter(
-            models.Q(full_name__icontains=q) |
-            models.Q(phone__icontains=q) |
-            models.Q(email__icontains=q) |
-            models.Q(code__icontains=q)
+            Q(full_name__icontains=q) |
+            Q(phone__icontains=q) |
+            Q(email__icontains=q) |
+            Q(code__icontains=q)
         )[:15]
 
     data = [
