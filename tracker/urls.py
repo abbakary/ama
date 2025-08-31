@@ -25,6 +25,12 @@ urlpatterns = [
     path("reports/", views.reports, name="reports"),
     path("reports/export/", views.reports_export, name="reports_export"),
 
+    # Inquiry management
+    path("inquiries/", views.inquiries, name="inquiries"),
+    path("inquiries/<int:pk>/", views.inquiry_detail, name="inquiry_detail"),
+    path("inquiries/<int:pk>/respond/", views.inquiry_respond, name="inquiry_respond"),
+    path("inquiries/<int:pk>/status/", views.update_inquiry_status, name="update_inquiry_status"),
+
     # Inventory (manager/admin)
     path("inventory/", views.inventory_list, name="inventory_list"),
     path("inventory/new/", views.inventory_create, name="inventory_create"),
