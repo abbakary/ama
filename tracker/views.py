@@ -17,6 +17,7 @@ from .forms import (
     CustomerStep4Form,
     VehicleForm,
     OrderForm,
+    CustomerEditForm,
 )
 
 
@@ -560,3 +561,19 @@ def user_edit(request: HttpRequest, pk: int):
     else:
         form = AdminUserForm(instance=u)
     return render(request, 'tracker/user_edit.html', { 'form': form, 'user_obj': u })
+
+
+@login_required
+def customer_edit(request: HttpRequest, pk: int):
+    customer = get_object_or_404(Customer, pk=pk)
+    if request.method == 'POST':
+        form = CustomerEditForm(request.POST, instance=customer)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Customer updated successfully')
+            return redirect('tracker:customer_detail', pk=customer.id)
+        else:
+            messages.error(request, 'Please correct errors and try again')
+    else:
+        form = CustomerEditForm(instance=customer)
+    return render(request, 'tracker/customer_edit.html', { 'form': form, 'customer': customer })
