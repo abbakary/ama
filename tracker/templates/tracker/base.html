@@ -59,6 +59,13 @@
                 </li>
                 
                 <li class="sidebar-list">
+                    <a href="{% url 'tracker:inquiries' %}" class="sidebar-link {% if request.resolver_match.url_name == 'inquiries' %}active{% endif %}">
+                        <i class="fas fa-question-circle"></i>
+                        <span>Inquiries</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-list">
                     <a href="{% url 'tracker:analytics' %}" class="sidebar-link {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">
                         <i class="fas fa-chart-line"></i>
                         <span>Analytics</span>
