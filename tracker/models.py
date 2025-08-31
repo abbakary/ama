@@ -111,7 +111,11 @@ class Order(models.Model):
     def save(self, *args, **kwargs):
         creating = self._state.adding
         if not self.order_number:
-            self.order_number = f"ORD{int(timezone.now().timestamp())}"
+            import uuid
+            self.order_number = f"ORD{str(uuid.uuid4())[:8].upper()}"
+            # Ensure uniqueness
+            while Order.objects.filter(order_number=self.order_number).exists():
+                self.order_number = f"ORD{str(uuid.uuid4())[:8].upper()}"
         super().save(*args, **kwargs)
         if creating:
             # Update visit tracking
