@@ -1,269 +1,564 @@
-{% extends 'tracker/base.html' %} {% load form_extras %} {% block content %}
-<h2 class="display-6 m-0 mb-2">Customer Registration</h2>
-<div class="stepper">
-  <div class="step {% if step == 1 %}active{% endif %}">
-    <span class="index">1</span> Basic Info
-  </div>
-  <div class="step {% if step == 2 %}active{% endif %}">
-    <span class="index">2</span> Intent
-  </div>
-  <div class="step {% if step == 3 %}active{% endif %}">
-    <span class="index">3</span> Service Type
-  </div>
-  <div class="step {% if step == 4 %}active{% endif %}">
-    <span class="index">4</span> Details & Review
-  </div>
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block page_title %}Register Customer{% endblock %}
+{% block breadcrumb %}Register Customer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h4 mb-0">Customer Registration</h2>
+    <a href="{% url 'tracker:customers_list' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Customers
+    </a>
 </div>
-<div class="m-card m-elev-2 hover-up">
-  <div class="m-card-body">
-    <form method="post" id="reg-form" onsubmit="saveDraft()">
-      {% csrf_token %}
-      <input type="hidden" name="step" value="{{ step }}" />
 
-      {% if step == 1 or not step %}
-      <div class="row g-3">
-        <div class="col-md-6">
-          <div class="form-floating mb-3">
-            {{ form.full_name|add_class:'form-control' }}<label
-              >Full Name</label
-            >
-          </div>
+<!-- Step Indicator -->
+<div class="step-indicator">
+    <div class="step {% if step == 1 %}active{% elif step > 1 %}completed{% endif %}">
+        <div class="step-number">
+            {% if step > 1 %}<i class="fas fa-check"></i>{% else %}1{% endif %}
         </div>
-        <div class="col-md-6">
-          <div class="form-floating mb-3">
-            {{ form.phone|add_class:'form-control' }}<label
-              >Phone (+255 xxx xxx xxx)</label
-            >
-          </div>
+        <div class="step-title">Basic Info</div>
+    </div>
+    <div class="step {% if step == 2 %}active{% elif step > 2 %}completed{% endif %}">
+        <div class="step-number">
+            {% if step > 2 %}<i class="fas fa-check"></i>{% else %}2{% endif %}
         </div>
-        <div class="col-md-6">
-          <div class="form-floating mb-3">
-            {{ form.email|add_class:'form-control' }}<label
-              >Email (optional)</label
-            >
-          </div>
+        <div class="step-title">Service Intent</div>
+    </div>
+    <div class="step {% if step == 3 %}active{% elif step > 3 %}completed{% endif %}">
+        <div class="step-number">
+            {% if step > 3 %}<i class="fas fa-check"></i>{% else %}3{% endif %}
         </div>
-        <div class="col-md-6">
-          <div class="form-floating mb-3">
-            {{ form.address|add_class:'form-control' }}<label>Address</label>
-          </div>
+        <div class="step-title">Service Details</div>
+    </div>
+    <div class="step {% if step == 4 %}active{% elif step > 4 %}completed{% endif %}">
+        <div class="step-number">
+            {% if step > 4 %}<i class="fas fa-check"></i>{% else %}4{% endif %}
         </div>
-        <div class="col-12">
-          <div class="form-floating mb-3">
-            {{ form.notes|add_class:'form-control' }}<label>Notes</label>
-          </div>
-        </div>
-      </div>
-      <div class="d-flex gap-2">
-        <button class="btn btn-success" name="action" value="save_customer">
-          Save Customer
-        </button>
-        <button class="btn btn-primary" onclick="setNextStep(2)">
-          Proceed to Order
-        </button>
-      </div>
-
-      {% elif step == 2 %}
-      <div class="m-chip mb-3">What brings the customer?</div>
-      <div class="form-floating mb-3">
-        {{ form.intent|add_class:'form-select' }}<label>Intent</label>
-      </div>
-      <div class="d-flex gap-2">
-        <button class="btn btn-outline-secondary" onclick="setNextStep(1)">
-          Back
-        </button>
-        <button class="btn btn-primary" onclick="setNextStep(3)">Next</button>
-      </div>
-
-      {% elif step == 3 %}
-      <div class="m-chip mb-3">Pick a service category</div>
-      <div class="form-floating mb-3">
-        {{ form.service_type|add_class:'form-select' }}<label
-          >Service Type</label
-        >
-      </div>
-      <div class="d-flex gap-2">
-        <button class="btn btn-outline-secondary" onclick="setNextStep(2)">
-          Back
-        </button>
-        <button class="btn btn-primary" onclick="setNextStep(4)">Next</button>
-      </div>
-
-      {% elif step == 4 %}
-      <div class="row g-3">
-        <div class="col-md-5">
-          <div class="m-card m-elev-1">
-            <div class="m-card-header">Customer Classification</div>
-            <div class="m-card-body">
-              <div class="form-floating mb-3">
-                {{ form.customer_type|add_class:'form-select' }}<label
-                  >Customer Type</label
-                >
-              </div>
-              <div id="org-fields">
-                <div class="form-floating mb-3">
-                  {{ form.organization_name|add_class:'form-control' }}<label
-                    >Organization Name</label
-                  >
-                </div>
-                <div class="form-floating mb-3">
-                  {{ form.tax_number|add_class:'form-control' }}<label
-                    >Tax Number</label
-                  >
-                </div>
-              </div>
-              <div id="personal-fields">
-                <div class="m-chip mb-2">Personal customer</div>
-                <div class="form-floating mb-3">
-                  {{ form.personal_subtype|add_class:'form-select' }}<label
-                    >Owner or Driver</label
-                  >
-                </div>
-              </div>
-            </div>
-          </div>
-          <div id="vehicle-section" class="m-card m-elev-1 mt-3">
-            <div class="m-card-header">Vehicle (optional)</div>
-            <div class="m-card-body">
-              <div class="form-floating mb-3">
-                {{ vehicle_form.plate_number|add_class:'form-control' }}<label
-                  >Plate Number</label
-                >
-              </div>
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <div class="form-floating mb-3">
-                    {{ vehicle_form.make|add_class:'form-control' }}<label
-                      >Make</label
-                    >
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-floating mb-3">
-                    {{ vehicle_form.model|add_class:'form-control' }}<label
-                      >Model</label
-                    >
-                  </div>
-                </div>
-              </div>
-              <div class="form-floating mb-3">
-                {{ vehicle_form.vehicle_type|add_class:'form-control' }}<label
-                  >Vehicle Type</label
-                >
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-7">
-          <div class="m-card m-elev-1">
-            <div class="m-card-header">Order Details</div>
-            <div class="m-card-body">
-              <div class="form-floating mb-3">
-                {{ order_form.type|add_class:'form-select' }}<label
-                  >Order Type</label
-                >
-              </div>
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <div class="form-floating mb-3">
-                    {{ order_form.priority|add_class:'form-select' }}<label
-                      >Priority</label
-                    >
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-floating mb-3">
-                    {{ order_form.estimated_duration|add_class:'form-control'
-                    }}<label>Estimated Duration (min)</label>
-                  </div>
-                </div>
-              </div>
-              <div id="service-group" class="mb-3">
-                <div class="m-chip mb-2">Select required services</div>
-                <div class="mb-2">{{ order_form.service_selection }}</div>
-                <div class="form-floating">
-                  {{ order_form.description|add_class:'form-control' }}<label
-                    >Problem Description</label
-                  >
-                </div>
-              </div>
-              <div id="sales-group" class="row g-3">
-                <div class="col-md-6">
-                  <div class="form-floating">
-                    {{ order_form.item_name|add_class:'form-select' }}<label
-                      >Item Name</label
-                    >
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-floating">
-                    {{ order_form.brand|add_class:'form-select' }}<label
-                      >Brand</label
-                    >
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-floating mt-3">
-                    {{ order_form.quantity|add_class:'form-control' }}<label
-                      >Quantity</label
-                    >
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-floating mt-3">
-                    {{ order_form.tire_type|add_class:'form-select' }}<label
-                      >Tire Type</label
-                    >
-                  </div>
-                </div>
-              </div>
-              <div id="consultation-group" class="row g-3">
-                <div class="col-md-6">
-                  <div class="form-floating">
-                    {{ order_form.inquiry_type|add_class:'form-select' }}<label
-                      >Inquiry Type</label
-                    >
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-floating">
-                    {{ order_form.contact_preference|add_class:'form-select'
-                    }}<label>Contact Preference</label>
-                  </div>
-                </div>
-                <div class="col-12">
-                  <div class="form-floating mt-3">
-                    {{ order_form.questions|add_class:'form-control' }}<label
-                      >Questions</label
-                    >
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-floating mt-3">
-                    {{ order_form.follow_up_date|add_class:'form-control'
-                    }}<label>Follow-up Date</label>
-                  </div>
-                </div>
-              </div>
-              <small class="text-muted d-block mt-2"
-                >Fields vary by order type.</small
-              >
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="d-flex gap-2 mt-3">
-        <button class="btn btn-outline-secondary" onclick="setNextStep(3)">
-          Back
-        </button>
-        <button class="btn btn-success" type="submit">Submit</button>
-      </div>
-      {% endif %}
-    </form>
-  </div>
+        <div class="step-title">Customer Type & Order</div>
+    </div>
 </div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0 text-white">
+                    <i class="fas fa-user-plus"></i>
+                    {% if step == 1 %}Step 1: Basic Information
+                    {% elif step == 2 %}Step 2: Service Intent
+                    {% elif step == 3 %}Step 3: Service Details
+                    {% elif step == 4 %}Step 4: Customer Type & Create Order
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="customer-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="step" value="{{ step }}">
+
+                    {% if step == 1 %}
+                    <!-- Step 1: Basic Information -->
+                    <div class="mb-4">
+                        <p class="text-muted mb-4">
+                            <i class="fas fa-info-circle"></i>
+                            Enter the customer's basic contact information. You can save just basic info or proceed to create a complete order.
+                        </p>
+
+                        <div class="mb-3">
+                            <label for="{{ form.full_name.id_for_label }}" class="form-label">
+                                <i class="fas fa-user"></i> Full Name *
+                            </label>
+                            {{ form.full_name }}
+                            {% if form.full_name.errors %}
+                                <div class="text-danger mt-1">{{ form.full_name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.phone.id_for_label }}" class="form-label">
+                                <i class="fas fa-phone"></i> Phone Number *
+                            </label>
+                            {{ form.phone }}
+                            {% if form.phone.errors %}
+                                <div class="text-danger mt-1">{{ form.phone.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">
+                                <i class="fas fa-envelope"></i> Email Address
+                            </label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="text-danger mt-1">{{ form.email.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.address.id_for_label }}" class="form-label">
+                                <i class="fas fa-map-marker-alt"></i> Address
+                            </label>
+                            {{ form.address }}
+                            {% if form.address.errors %}
+                                <div class="text-danger mt-1">{{ form.address.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                <i class="fas fa-sticky-note"></i> Notes
+                            </label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="text-danger mt-1">{{ form.notes.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" name="action" value="save_customer" class="btn btn-success">
+                            <i class="fas fa-save"></i> Save Customer Only
+                        </button>
+                        <button type="submit" name="action" value="continue" class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> Continue to Order
+                        </button>
+                    </div>
+
+                    {% elif step == 2 %}
+                    <!-- Step 2: Service Intent -->
+                    <div class="mb-4">
+                        <p class="text-muted mb-4">
+                            <i class="fas fa-question-circle"></i>
+                            What brings you here today?
+                        </p>
+
+                        <div class="row">
+                            {% for value, label in form.intent.field.choices %}
+                            <div class="col-md-12 mb-3">
+                                <div class="card border-2 intent-card" data-intent="{{ value }}">
+                                    <div class="card-body p-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="intent" value="{{ value }}" id="intent_{{ value }}"
+                                                   {% if form.intent.value == value %}checked{% endif %}>
+                                            <label class="form-check-label d-flex align-items-center" for="intent_{{ value }}">
+                                                {% if value == 'service' %}
+                                                    <i class="fas fa-tools text-primary me-3 fs-4"></i>
+                                                {% elif value == 'sales' %}
+                                                    <i class="fas fa-shopping-cart text-success me-3 fs-4"></i>
+                                                {% elif value == 'inquiry' %}
+                                                    <i class="fas fa-question-circle text-info me-3 fs-4"></i>
+                                                {% endif %}
+                                                <div>
+                                                    <div class="fw-bold">{{ label }}</div>
+                                                    <small class="text-muted">
+                                                        {% if value == 'service' %}Vehicle maintenance, repairs, and services
+                                                        {% elif value == 'sales' %}Purchase tires, parts, or accessories
+                                                        {% elif value == 'inquiry' %}General questions and consultations
+                                                        {% endif %}
+                                                    </small>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if form.intent.errors %}
+                            <div class="text-danger mt-2">{{ form.intent.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'tracker:customer_register' %}?step=1" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Previous
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> Continue
+                        </button>
+                    </div>
+
+                    {% elif step == 3 %}
+                    <!-- Step 3: Service Details -->
+                    <div class="mb-4">
+                        {% if request.session.reg_step2.intent == 'service' %}
+                        <p class="text-muted mb-4">
+                            <i class="fas fa-tools"></i>
+                            What type of service do you need?
+                        </p>
+
+                        <div class="row">
+                            {% for value, label in form.service_type.field.choices %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card border-2 service-card">
+                                    <div class="card-body p-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="service_type" value="{{ value }}" id="service_{{ value }}"
+                                                   {% if form.service_type.value == value %}checked{% endif %}>
+                                            <label class="form-check-label" for="service_{{ value }}">
+                                                <div class="fw-bold">{{ label }}</div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        {% elif request.session.reg_step2.intent == 'sales' %}
+                        <p class="text-muted mb-4">
+                            <i class="fas fa-shopping-cart"></i>
+                            What would you like to purchase?
+                        </p>
+
+                        <div class="row">
+                            {% for value, label in form.sales_type.field.choices %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card border-2 sales-card">
+                                    <div class="card-body p-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="sales_type" value="{{ value }}" id="sales_{{ value }}"
+                                                   {% if form.sales_type.value == value %}checked{% endif %}>
+                                            <label class="form-check-label" for="sales_{{ value }}">
+                                                <div class="fw-bold">{{ label }}</div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        {% elif request.session.reg_step2.intent == 'inquiry' %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            Great! We'll help you with your inquiry. Please proceed to the next step to complete your information.
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'tracker:customer_register' %}?step=2" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Previous
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> Continue
+                        </button>
+                    </div>
+
+                    {% elif step == 4 %}
+                    <!-- Step 4: Customer Type and Order Creation -->
+                    <div class="mb-4">
+                        <p class="text-muted mb-4">
+                            <i class="fas fa-user-tag"></i>
+                            Please specify the customer type and complete the order details.
+                        </p>
+
+                        <!-- Customer Type Section -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-user-tag"></i> Customer Type *</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="{{ form.customer_type.id_for_label }}" class="form-label">Customer Type</label>
+                                    {{ form.customer_type }}
+                                    {% if form.customer_type.errors %}
+                                        <div class="text-danger mt-1">{{ form.customer_type.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Organization fields (shown/hidden based on customer type) -->
+                                <div id="org-fields" style="display: none;">
+                                    <div class="mb-3">
+                                        <label for="{{ form.organization_name.id_for_label }}" class="form-label">Organization Name *</label>
+                                        {{ form.organization_name }}
+                                        {% if form.organization_name.errors %}
+                                            <div class="text-danger mt-1">{{ form.organization_name.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="{{ form.tax_number.id_for_label }}" class="form-label">Tax Number/TIN *</label>
+                                        {{ form.tax_number }}
+                                        {% if form.tax_number.errors %}
+                                            <div class="text-danger mt-1">{{ form.tax_number.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- Personal subtype (shown for personal customers) -->
+                                <div id="personal-fields" style="display: none;">
+                                    <div class="mb-3">
+                                        <label for="{{ form.personal_subtype.id_for_label }}" class="form-label">You are the *</label>
+                                        {{ form.personal_subtype }}
+                                        {% if form.personal_subtype.errors %}
+                                            <div class="text-danger mt-1">{{ form.personal_subtype.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vehicle Information -->
+                        {% if request.session.reg_step2.intent == 'service' or request.session.reg_step2.intent == 'sales' %}
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-car"></i> Vehicle Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ vehicle_form.plate_number.id_for_label }}" class="form-label">Plate Number</label>
+                                        {{ vehicle_form.plate_number }}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ vehicle_form.make.id_for_label }}" class="form-label">Make</label>
+                                        {{ vehicle_form.make }}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ vehicle_form.model.id_for_label }}" class="form-label">Model</label>
+                                        {{ vehicle_form.model }}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ vehicle_form.vehicle_type.id_for_label }}" class="form-label">Vehicle Type</label>
+                                        {{ vehicle_form.vehicle_type }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Order Details -->
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-clipboard-list"></i> Order Details</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ order_form.type.id_for_label }}" class="form-label">Order Type</label>
+                                        {{ order_form.type }}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ order_form.priority.id_for_label }}" class="form-label">Priority</label>
+                                        {{ order_form.priority }}
+                                    </div>
+                                </div>
+
+                                <!-- Service-specific fields -->
+                                <div id="service-fields" style="display: none;">
+                                    <div class="mb-3">
+                                        <label for="{{ order_form.description.id_for_label }}" class="form-label">Problem Description *</label>
+                                        {{ order_form.description }}
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="{{ order_form.estimated_duration.id_for_label }}" class="form-label">Estimated Duration (minutes) *</label>
+                                        {{ order_form.estimated_duration }}
+                                    </div>
+                                </div>
+
+                                <!-- Sales-specific fields -->
+                                <div id="sales-fields" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <label for="{{ order_form.item_name.id_for_label }}" class="form-label">Item *</label>
+                                            {{ order_form.item_name }}
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label for="{{ order_form.brand.id_for_label }}" class="form-label">Brand *</label>
+                                            {{ order_form.brand }}
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label for="{{ order_form.quantity.id_for_label }}" class="form-label">Quantity *</label>
+                                            {{ order_form.quantity }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Consultation-specific fields -->
+                                <div id="consultation-fields" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="{{ order_form.inquiry_type.id_for_label }}" class="form-label">Inquiry Type *</label>
+                                            {{ order_form.inquiry_type }}
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="{{ order_form.contact_preference.id_for_label }}" class="form-label">Contact Preference</label>
+                                            {{ order_form.contact_preference }}
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="{{ order_form.questions.id_for_label }}" class="form-label">Questions/Details *</label>
+                                        {{ order_form.questions }}
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="{{ order_form.follow_up_date.id_for_label }}" class="form-label">Follow-up Date</label>
+                                        {{ order_form.follow_up_date }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'tracker:customer_register' %}?step=3" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Previous
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check"></i> Complete Registration
+                        </button>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-  restoreDraft();
-  initOrderFormDynamic && initOrderFormDynamic();
+document.addEventListener('DOMContentLoaded', function() {
+    // Intent card selection
+    const intentCards = document.querySelectorAll('.intent-card');
+    intentCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const radio = this.querySelector('input[type="radio"]');
+            radio.checked = true;
+            
+            // Update visual selection
+            intentCards.forEach(c => c.classList.remove('border-primary', 'bg-light'));
+            this.classList.add('border-primary', 'bg-light');
+        });
+    });
+
+    // Service/Sales card selection
+    const serviceCards = document.querySelectorAll('.service-card, .sales-card');
+    serviceCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const radio = this.querySelector('input[type="radio"]');
+            radio.checked = true;
+            
+            // Update visual selection
+            const parentCards = this.classList.contains('service-card') ? 
+                document.querySelectorAll('.service-card') : 
+                document.querySelectorAll('.sales-card');
+            
+            parentCards.forEach(c => c.classList.remove('border-primary', 'bg-light'));
+            this.classList.add('border-primary', 'bg-light');
+        });
+    });
+
+    // Customer type change handler
+    const customerTypeSelect = document.getElementById('id_customer_type');
+    if (customerTypeSelect) {
+        customerTypeSelect.addEventListener('change', function() {
+            const orgFields = document.getElementById('org-fields');
+            const personalFields = document.getElementById('personal-fields');
+            
+            if (['government', 'ngo', 'company'].includes(this.value)) {
+                orgFields.style.display = 'block';
+                personalFields.style.display = 'none';
+            } else if (this.value === 'personal') {
+                orgFields.style.display = 'none';
+                personalFields.style.display = 'block';
+            } else {
+                orgFields.style.display = 'none';
+                personalFields.style.display = 'none';
+            }
+        });
+        
+        // Trigger on page load
+        customerTypeSelect.dispatchEvent(new Event('change'));
+    }
+
+    // Order type change handler
+    const orderTypeSelect = document.getElementById('id_type');
+    if (orderTypeSelect) {
+        orderTypeSelect.addEventListener('change', function() {
+            const serviceFields = document.getElementById('service-fields');
+            const salesFields = document.getElementById('sales-fields');
+            const consultationFields = document.getElementById('consultation-fields');
+            
+            // Hide all fields first
+            serviceFields.style.display = 'none';
+            salesFields.style.display = 'none';
+            consultationFields.style.display = 'none';
+            
+            // Show relevant fields
+            if (this.value === 'service') {
+                serviceFields.style.display = 'block';
+            } else if (this.value === 'sales') {
+                salesFields.style.display = 'block';
+            } else if (this.value === 'consultation') {
+                consultationFields.style.display = 'block';
+            }
+        });
+        
+        // Set initial order type based on intent
+        {% if request.session.reg_step2.intent == 'service' %}
+        orderTypeSelect.value = 'service';
+        {% elif request.session.reg_step2.intent == 'sales' %}
+        orderTypeSelect.value = 'sales';
+        {% elif request.session.reg_step2.intent == 'inquiry' %}
+        orderTypeSelect.value = 'consultation';
+        {% endif %}
+        
+        // Trigger on page load
+        orderTypeSelect.dispatchEvent(new Event('change'));
+    }
+
+    // Form validation
+    const form = document.getElementById('customer-form');
+    form.addEventListener('submit', function(e) {
+        const step = parseInt(document.querySelector('input[name="step"]').value);
+        
+        if (step === 2) {
+            const intentChecked = document.querySelector('input[name="intent"]:checked');
+            if (!intentChecked) {
+                e.preventDefault();
+                alert('Please select your service intent.');
+                return;
+            }
+        }
+        
+        if (step === 4) {
+            const customerType = document.getElementById('id_customer_type').value;
+            if (!customerType) {
+                e.preventDefault();
+                alert('Please select a customer type.');
+                return;
+            }
+        }
+    });
+
+    // Initialize visual selections
+    const checkedIntent = document.querySelector('input[name="intent"]:checked');
+    if (checkedIntent) {
+        const card = checkedIntent.closest('.intent-card');
+        if (card) {
+            card.classList.add('border-primary', 'bg-light');
+        }
+    }
+
+    const checkedService = document.querySelector('input[name="service_type"]:checked');
+    if (checkedService) {
+        const card = checkedService.closest('.service-card');
+        if (card) {
+            card.classList.add('border-primary', 'bg-light');
+        }
+    }
+
+    const checkedSales = document.querySelector('input[name="sales_type"]:checked');
+    if (checkedSales) {
+        const card = checkedSales.closest('.sales-card');
+        if (card) {
+            card.classList.add('border-primary', 'bg-light');
+        }
+    }
+});
 </script>
 {% endblock %}
