@@ -685,3 +685,154 @@ def customers_quick_create(request: HttpRequest):
             return JsonResponse({'success': False, 'message': f'Error creating customer: {str(e)}'})
 
     return JsonResponse({'success': False, 'message': 'Invalid request'})
+
+
+@login_required
+def inquiries(request: HttpRequest):
+    """View and manage customer inquiries"""
+    # Get filter parameters
+    inquiry_type = request.GET.get('type', '')
+    status = request.GET.get('status', '')
+    follow_up = request.GET.get('follow_up', '')
+
+    # Base queryset for consultation orders (inquiries)
+    queryset = Order.objects.filter(type='consultation').select_related('customer').order_by('-created_at')
+
+    # Apply filters
+    if inquiry_type:
+        queryset = queryset.filter(inquiry_type=inquiry_type)
+
+    if status:
+        queryset = queryset.filter(status=status)
+
+    if follow_up == 'required':
+        queryset = queryset.filter(follow_up_date__isnull=False)
+    elif follow_up == 'overdue':
+        today = timezone.localdate()
+        queryset = queryset.filter(
+            follow_up_date__lte=today,
+            status__in=['created', 'in_progress']
+        )
+
+    # Pagination
+    paginator = Paginator(queryset, 12)  # Show 12 inquiries per page
+    page = request.GET.get('page')
+    inquiries = paginator.get_page(page)
+
+    # Statistics
+    stats = {
+        'new': Order.objects.filter(type='consultation', status='created').count(),
+        'in_progress': Order.objects.filter(type='consultation', status='in_progress').count(),
+        'resolved': Order.objects.filter(type='consultation', status='completed').count(),
+    }
+
+    context = {
+        'inquiries': inquiries,
+        'stats': stats,
+        'today': timezone.localdate(),
+    }
+
+    return render(request, 'tracker/inquiries.html', context)
+
+
+@login_required
+def inquiry_detail(request: HttpRequest, pk: int):
+    """Get inquiry details for modal view"""
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        try:
+            inquiry = get_object_or_404(Order, pk=pk, type='consultation')
+
+            data = {
+                'id': inquiry.id,
+                'customer': {
+                    'name': inquiry.customer.full_name,
+                    'phone': inquiry.customer.phone,
+                    'email': inquiry.customer.email or '',
+                },
+                'inquiry_type': inquiry.inquiry_type or 'General',
+                'contact_preference': inquiry.contact_preference or 'Phone',
+                'questions': inquiry.questions or '',
+                'status': inquiry.status,
+                'status_display': inquiry.get_status_display(),
+                'created_at': inquiry.created_at.isoformat(),
+                'follow_up_date': inquiry.follow_up_date.isoformat() if inquiry.follow_up_date else None,
+                'responses': [],  # In a real app, you'd have a related model for responses
+            }
+
+            return JsonResponse(data)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+@login_required
+def inquiry_respond(request: HttpRequest, pk: int):
+    """Respond to a customer inquiry"""
+    inquiry = get_object_or_404(Order, pk=pk, type='consultation')
+
+    if request.method == 'POST':
+        response_text = request.POST.get('response', '').strip()
+        follow_up_required = request.POST.get('follow_up_required') == 'on'
+        follow_up_date = request.POST.get('follow_up_date')
+
+        if not response_text:
+            messages.error(request, 'Response message is required')
+            return redirect('tracker:inquiries')
+
+        # In a real application, you'd save the response to a related model
+        # For now, we'll update the inquiry status and add the response to notes
+
+        if inquiry.notes:
+            inquiry.notes += f"\n\n[{timezone.now().strftime('%Y-%m-%d %H:%M')}] Response: {response_text}"
+        else:
+            inquiry.notes = f"[{timezone.now().strftime('%Y-%m-%d %H:%M')}] Response: {response_text}"
+
+        # Update follow-up date if required
+        if follow_up_required and follow_up_date:
+            try:
+                inquiry.follow_up_date = follow_up_date
+            except ValueError:
+                pass
+
+        # Mark as in progress if not already completed
+        if inquiry.status == 'created':
+            inquiry.status = 'in_progress'
+
+        inquiry.save()
+
+        messages.success(request, 'Response sent successfully')
+        return redirect('tracker:inquiries')
+
+    return redirect('tracker:inquiries')
+
+
+@login_required
+def update_inquiry_status(request: HttpRequest, pk: int):
+    """Update inquiry status"""
+    inquiry = get_object_or_404(Order, pk=pk, type='consultation')
+
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+
+        if new_status in ['created', 'in_progress', 'completed']:
+            old_status = inquiry.status
+            inquiry.status = new_status
+
+            if new_status == 'completed':
+                inquiry.completed_at = timezone.now()
+
+            inquiry.save()
+
+            status_display = {
+                'created': 'New',
+                'in_progress': 'In Progress',
+                'completed': 'Resolved'
+            }
+
+            messages.success(request, f'Inquiry status updated to {status_display.get(new_status, new_status)}')
+        else:
+            messages.error(request, 'Invalid status')
+
+    return redirect('tracker:inquiries')
