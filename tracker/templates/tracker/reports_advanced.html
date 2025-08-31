@@ -1,0 +1,699 @@
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block page_title %}Advanced Reports{% endblock %}
+{% block breadcrumb %}Advanced Reports{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h4 mb-0">
+        <i class="fas fa-chart-bar text-primary"></i>
+        Advanced Reports & Analytics
+    </h2>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary" onclick="exportReport()">
+            <i class="fas fa-download"></i> Export Report
+        </button>
+        <div class="dropdown">
+            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-calendar"></i> {{ period|title }} Report
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="?period=daily">Daily Report</a></li>
+                <li><a class="dropdown-item" href="?period=weekly">Weekly Report</a></li>
+                <li><a class="dropdown-item" href="?period=monthly">Monthly Report</a></li>
+                <li><a class="dropdown-item" href="?period=yearly">Yearly Report</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Report Sidebar -->
+    <div class="col-lg-3 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0 text-white">
+                    <i class="fas fa-filter"></i> Report Categories
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    <a href="?period={{ period }}&type=overview" 
+                       class="list-group-item list-group-item-action {% if report_type == 'overview' or not report_type %}active{% endif %}">
+                        <i class="fas fa-tachometer-alt text-primary me-2"></i>
+                        Overview
+                    </a>
+                    <a href="?period={{ period }}&type=orders" 
+                       class="list-group-item list-group-item-action {% if report_type == 'orders' %}active{% endif %}">
+                        <i class="fas fa-shopping-cart text-success me-2"></i>
+                        Orders Analysis
+                    </a>
+                    <a href="?period={{ period }}&type=customers" 
+                       class="list-group-item list-group-item-action {% if report_type == 'customers' %}active{% endif %}">
+                        <i class="fas fa-users text-info me-2"></i>
+                        Customer Insights
+                    </a>
+                    <a href="?period={{ period }}&type=revenue" 
+                       class="list-group-item list-group-item-action {% if report_type == 'revenue' %}active{% endif %}">
+                        <i class="fas fa-dollar-sign text-warning me-2"></i>
+                        Revenue Analysis
+                    </a>
+                    <a href="?period={{ period }}&type=performance" 
+                       class="list-group-item list-group-item-action {% if report_type == 'performance' %}active{% endif %}">
+                        <i class="fas fa-chart-line text-danger me-2"></i>
+                        Performance Metrics
+                    </a>
+                    <a href="?period={{ period }}&type=inquiries" 
+                       class="list-group-item list-group-item-action {% if report_type == 'inquiries' %}active{% endif %}">
+                        <i class="fas fa-question-circle text-purple me-2"></i>
+                        Inquiry Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0 text-white">
+                    <i class="fas fa-info-circle"></i> Quick Stats
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="h4 text-primary mb-1">{{ stats.total_orders }}</div>
+                    <div class="small text-muted">Total Orders</div>
+                </div>
+                <div class="text-center mb-3">
+                    <div class="h4 text-success mb-1">{{ stats.completed_orders }}</div>
+                    <div class="small text-muted">Completed</div>
+                </div>
+                <div class="text-center mb-3">
+                    <div class="h4 text-warning mb-1">{{ stats.pending_orders }}</div>
+                    <div class="small text-muted">Pending</div>
+                </div>
+                <div class="text-center">
+                    <div class="h4 text-info mb-1">{{ stats.total_customers }}</div>
+                    <div class="small text-muted">Total Customers</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Report Content -->
+    <div class="col-lg-9">
+        {% if report_type == 'overview' or not report_type %}
+        <!-- Overview Report -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card bg-gradient-primary text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <div class="h4 mb-0">{{ stats.total_orders }}</div>
+                                <div class="small">Total Orders</div>
+                            </div>
+                            <i class="fas fa-shopping-cart fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-gradient-success text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <div class="h4 mb-0">{{ stats.completion_rate }}%</div>
+                                <div class="small">Completion Rate</div>
+                            </div>
+                            <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-gradient-warning text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <div class="h4 mb-0">{{ stats.avg_duration }}</div>
+                                <div class="small">Avg Duration (min)</div>
+                            </div>
+                            <i class="fas fa-clock fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-gradient-info text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <div class="h4 mb-0">{{ stats.new_customers }}</div>
+                                <div class="small">New Customers</div>
+                            </div>
+                            <i class="fas fa-user-plus fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0 text-white">Orders Trend ({{ period|title }})</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="ordersChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0 text-white">Order Status Distribution</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="statusChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% elif report_type == 'orders' %}
+        <!-- Orders Analysis -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0 text-white">Orders Analysis - {{ period|title }}</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-8">
+                        <canvas id="ordersAnalysisChart" height="200"></canvas>
+                    </div>
+                    <div class="col-lg-4">
+                        <h6>Order Breakdown</h6>
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span>Service Orders</span>
+                                <strong>{{ stats.service_orders }}</strong>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-info" style="width: {{ stats.service_percentage }}%"></div>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span>Sales Orders</span>
+                                <strong>{{ stats.sales_orders }}</strong>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-success" style="width: {{ stats.sales_percentage }}%"></div>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span>Consultations</span>
+                                <strong>{{ stats.consultation_orders }}</strong>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-warning" style="width: {{ stats.consultation_percentage }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% elif report_type == 'customers' %}
+        <!-- Customer Insights -->
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0 text-white">Customer Growth</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="customerGrowthChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0 text-white">Customer Types</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="customerTypesChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% elif report_type == 'performance' %}
+        <!-- Performance Metrics -->
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0 text-white">Performance Dashboard</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-lg-8">
+                                <canvas id="performanceChart" height="200"></canvas>
+                            </div>
+                            <div class="col-lg-4">
+                                <h6>Key Metrics</h6>
+                                <div class="metric-item mb-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span>Average Service Time</span>
+                                        <span class="badge bg-info">{{ stats.avg_service_time }} min</span>
+                                    </div>
+                                    <div class="progress mt-1" style="height: 4px;">
+                                        <div class="progress-bar bg-info" style="width: 75%"></div>
+                                    </div>
+                                </div>
+                                <div class="metric-item mb-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span>Customer Satisfaction</span>
+                                        <span class="badge bg-success">95%</span>
+                                    </div>
+                                    <div class="progress mt-1" style="height: 4px;">
+                                        <div class="progress-bar bg-success" style="width: 95%"></div>
+                                    </div>
+                                </div>
+                                <div class="metric-item mb-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span>Order Accuracy</span>
+                                        <span class="badge bg-warning">88%</span>
+                                    </div>
+                                    <div class="progress mt-1" style="height: 4px;">
+                                        <div class="progress-bar bg-warning" style="width: 88%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% elif report_type == 'inquiries' %}
+        <!-- Inquiry Reports -->
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0 text-white">Inquiry Volume</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="inquiryVolumeChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0 text-white">Response Time Analysis</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="responseTimeChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- Revenue Analysis -->
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0 text-white">Revenue Trends</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-lg-8">
+                                <canvas id="revenueChart" height="200"></canvas>
+                            </div>
+                            <div class="col-lg-4">
+                                <h6>Revenue Breakdown</h6>
+                                <div class="mb-3">
+                                    <div class="text-center p-3 bg-light rounded">
+                                        <div class="h4 text-success mb-1">$12,450</div>
+                                        <div class="small text-muted">Total Revenue</div>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Services</span>
+                                        <strong>$8,200</strong>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Sales</span>
+                                        <strong>$3,450</strong>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Consultations</span>
+                                        <strong>$800</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Data Table -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0 text-white">
+                    <i class="fas fa-table"></i> 
+                    {% if report_type == 'customers' %}Customer Data
+                    {% elif report_type == 'inquiries' %}Inquiry Data
+                    {% else %}Order Data
+                    {% endif %}
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr style="background-color: #f5f6fa; color: #2c3e50;">
+                                {% if report_type == 'customers' %}
+                                <th>Customer</th>
+                                <th>Type</th>
+                                <th>Registration Date</th>
+                                <th>Total Orders</th>
+                                <th>Last Visit</th>
+                                {% elif report_type == 'inquiries' %}
+                                <th>Customer</th>
+                                <th>Inquiry Type</th>
+                                <th>Status</th>
+                                <th>Created Date</th>
+                                <th>Response Time</th>
+                                {% else %}
+                                <th>Order #</th>
+                                <th>Customer</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Created Date</th>
+                                <th>Duration</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in data_items %}
+                            <tr>
+                                {% if report_type == 'customers' %}
+                                <td>{{ item.full_name }}</td>
+                                <td><span class="badge bg-info">{{ item.customer_type|title }}</span></td>
+                                <td>{{ item.registration_date|date:"M d, Y" }}</td>
+                                <td>{{ item.total_visits }}</td>
+                                <td>{{ item.last_visit|date:"M d, Y"|default:"Never" }}</td>
+                                {% elif report_type == 'inquiries' %}
+                                <td>{{ item.customer.full_name }}</td>
+                                <td>{{ item.inquiry_type|default:"General" }}</td>
+                                <td><span class="badge bg-success">{{ item.get_status_display }}</span></td>
+                                <td>{{ item.created_at|date:"M d, Y" }}</td>
+                                <td>2h 30m</td>
+                                {% else %}
+                                <td>{{ item.order_number }}</td>
+                                <td>{{ item.customer.full_name }}</td>
+                                <td><span class="badge bg-primary">{{ item.get_type_display }}</span></td>
+                                <td><span class="badge bg-success">{{ item.get_status_display }}</span></td>
+                                <td>{{ item.created_at|date:"M d, Y" }}</td>
+                                <td>{{ item.actual_duration|default:"N/A" }} min</td>
+                                {% endif %}
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">No data available for this period</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const chartData = JSON.parse("{{ chart_data|escapejs }}");
+
+// Common chart options
+const commonOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            position: 'bottom'
+        }
+    }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    {% if report_type == 'overview' or not report_type %}
+    // Orders Trend Chart
+    if (document.getElementById('ordersChart')) {
+        new Chart(document.getElementById('ordersChart'), {
+            type: 'line',
+            data: {
+                labels: chartData.trend.labels,
+                datasets: [{
+                    label: 'Orders',
+                    data: chartData.trend.values,
+                    borderColor: '#1976d2',
+                    backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: commonOptions
+        });
+    }
+
+    // Status Chart
+    if (document.getElementById('statusChart')) {
+        new Chart(document.getElementById('statusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: chartData.status.labels,
+                datasets: [{
+                    data: chartData.status.values,
+                    backgroundColor: ['#e3f2fd', '#bbdefb', '#90caf9', '#64b5f6', '#42a5f5']
+                }]
+            },
+            options: commonOptions
+        });
+    }
+
+    {% elif report_type == 'orders' %}
+    // Orders Analysis Chart
+    if (document.getElementById('ordersAnalysisChart')) {
+        new Chart(document.getElementById('ordersAnalysisChart'), {
+            type: 'bar',
+            data: {
+                labels: chartData.orders.labels,
+                datasets: [{
+                    label: 'Orders',
+                    data: chartData.orders.values,
+                    backgroundColor: ['#1976d2', '#388e3c', '#f57c00'],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                ...commonOptions,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    {% elif report_type == 'customers' %}
+    // Customer Growth Chart
+    if (document.getElementById('customerGrowthChart')) {
+        new Chart(document.getElementById('customerGrowthChart'), {
+            type: 'line',
+            data: {
+                labels: chartData.growth.labels,
+                datasets: [{
+                    label: 'New Customers',
+                    data: chartData.growth.values,
+                    borderColor: '#4caf50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: commonOptions
+        });
+    }
+
+    // Customer Types Chart
+    if (document.getElementById('customerTypesChart')) {
+        new Chart(document.getElementById('customerTypesChart'), {
+            type: 'pie',
+            data: {
+                labels: chartData.types.labels,
+                datasets: [{
+                    data: chartData.types.values,
+                    backgroundColor: ['#2196f3', '#4caf50', '#ff9800', '#9c27b0', '#f44336']
+                }]
+            },
+            options: commonOptions
+        });
+    }
+
+    {% elif report_type == 'performance' %}
+    // Performance Chart
+    if (document.getElementById('performanceChart')) {
+        new Chart(document.getElementById('performanceChart'), {
+            type: 'radar',
+            data: {
+                labels: ['Speed', 'Quality', 'Satisfaction', 'Efficiency', 'Accuracy'],
+                datasets: [{
+                    label: 'Performance',
+                    data: [85, 92, 95, 78, 88],
+                    borderColor: '#1976d2',
+                    backgroundColor: 'rgba(25, 118, 210, 0.2)',
+                    pointBackgroundColor: '#1976d2'
+                }]
+            },
+            options: {
+                ...commonOptions,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+    }
+
+    {% elif report_type == 'inquiries' %}
+    // Inquiry Volume Chart
+    if (document.getElementById('inquiryVolumeChart')) {
+        new Chart(document.getElementById('inquiryVolumeChart'), {
+            type: 'bar',
+            data: {
+                labels: chartData.inquiries.labels,
+                datasets: [{
+                    label: 'Inquiries',
+                    data: chartData.inquiries.values,
+                    backgroundColor: '#9c27b0',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                ...commonOptions,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    // Response Time Chart
+    if (document.getElementById('responseTimeChart')) {
+        new Chart(document.getElementById('responseTimeChart'), {
+            type: 'line',
+            data: {
+                labels: chartData.response.labels,
+                datasets: [{
+                    label: 'Avg Response Time (hours)',
+                    data: chartData.response.values,
+                    borderColor: '#ff5722',
+                    backgroundColor: 'rgba(255, 87, 34, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: commonOptions
+        });
+    }
+
+    {% else %}
+    // Revenue Chart
+    if (document.getElementById('revenueChart')) {
+        new Chart(document.getElementById('revenueChart'), {
+            type: 'bar',
+            data: {
+                labels: chartData.revenue.labels,
+                datasets: [{
+                    label: 'Revenue ($)',
+                    data: chartData.revenue.values,
+                    backgroundColor: '#4caf50',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                ...commonOptions,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+    {% endif %}
+});
+
+function exportReport() {
+    const period = '{{ period }}';
+    const reportType = '{{ report_type|default:"overview" }}';
+    
+    // In a real implementation, this would generate and download a PDF/Excel report
+    alert(`Exporting ${period} ${reportType} report...`);
+    
+    // You could implement actual export functionality here
+    window.open(`/reports/export/?period=${period}&type=${reportType}`, '_blank');
+}
+
+// Auto-refresh reports every 5 minutes
+setInterval(() => {
+    location.reload();
+}, 300000);
+</script>
+
+<style>
+.bg-gradient-primary { background: linear-gradient(135deg, #1976d2, #1565c0); }
+.bg-gradient-success { background: linear-gradient(135deg, #4caf50, #388e3c); }
+.bg-gradient-warning { background: linear-gradient(135deg, #ff9800, #f57c00); }
+.bg-gradient-info { background: linear-gradient(135deg, #2196f3, #1976d2); }
+
+.text-purple { color: #9c27b0; }
+.bg-purple { background-color: #9c27b0; }
+
+.metric-item {
+    border-left: 3px solid #e0e0e0;
+    padding-left: 12px;
+}
+
+.list-group-item.active {
+    background: linear-gradient(135deg, #1976d2, #1565c0);
+    border-color: #1976d2;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease;
+}
+</style>
+{% endblock %}
